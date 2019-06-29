@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+R/.DS_Store
+man/.DS_Store
+src/.DS_Store
+src/*.so
+src/*.o
+src/*.dll
+Icon?
