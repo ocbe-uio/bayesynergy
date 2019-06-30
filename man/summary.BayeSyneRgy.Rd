@@ -14,3 +14,13 @@
 \description{
 A function summarizing posterior inference of a \code{BayeSyneRgy} object.
 }
+\examples{
+library(BayeSyneRgy)
+data("mathews_DLBCL")
+y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
+x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
+fit <- BayeSyneRgy(y_mat,x_mat)
+summary(fit)
+
+
+}

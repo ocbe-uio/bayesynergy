@@ -6,6 +6,13 @@
 #' @param object The fitted model to summarise, from \code{\link{BayeSyneRgy}}.
 #' @param ... further arguments passed to or from other methods.
 #' 
+#' @examples
+#' library(BayeSyneRgy)
+#' data("mathews_DLBCL")
+#' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
+#' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
+#' fit <- BayeSyneRgy(y_mat,x_mat)
+#' summary(fit)
 #' 
 #' 
 #' @export

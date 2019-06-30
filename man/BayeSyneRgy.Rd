@@ -34,9 +34,16 @@ of the two drugs.}
 \value{
 A list with the following components:
 \tabular{ll}{
-OUTPUT \tab A list containing the original data sent to the algorithm, a list of hyper-parameters used, and a list containing samples from the posterior distribution.  \cr 
-type \tab The type of model that was run. \cr
-drug_names \tab The name of the drugs used in the experiment, taken from the column names of the concentration matrix. Used for plotting. \cr
+OUTPUT \tab a list containing samples from the posterior distribution.  \cr 
+data \tab the original data used to fit the model \cr
+type \tab the type of model that was run. \cr
+Alg_param \tab the parameters used for the MCMC sampler \cr
+Hyper_param \tab the hyperparameters used for the prior distributions \cr
+drug_names \tab the name of the drugs used in the experiment, taken from the column names of the concentration matrix. Used for plotting. \cr
+Summary_Output \tab a list containing summary statistics calculated from the MCMC chains \cr
+p_ij_mean \tab the response matrix \cr
+p_0_mean \tab the calculated non-interaction matrix \cr
+Delta_mean \tab the average posterior mean of the interaction \cr
 }
 }
 \description{
@@ -79,6 +86,15 @@ alpha: \tab The alpha parameter for the rational quadratic kernel. Depending on 
 sigma2_f: \tab The kernel amplitude, i.e. \eqn{\sigma^2 k(x,x')}. Depending on the length of the argument and the specification in \code{sigma2_f_prior}, either a fixed number; a single hyperparameter for a Half-Cauchy prior; or hyperparameters for an Inverse-Gamma prior.  \cr
 sigma2_f_prior: \tab An indicator for the type of prior on the kernel amplitude. Either 0 (fixed), 1 (Inverse-Gamma(a,b)) or 2 (Half-Cauchy(h))  \cr
 }
+}
+\examples{
+library(BayeSyneRgy)
+data("mathews_DLBCL")
+y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
+x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
+fit <- BayeSyneRgy(y_mat,x_mat)
+
+
 }
 \references{
 Cremaschi A, Frigessi A, Taskén K, Zucknick M. (2019) A Bayesian approach for the study of synergistic interaction effects in in-vitro drug combination experiments. arXiv.org. https://arxiv.org/abs/1904.04901.
