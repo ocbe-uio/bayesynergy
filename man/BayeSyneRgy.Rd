@@ -29,7 +29,7 @@ of the two drugs.}
 
 \item{var_prior}{Indicating which hyper-prior to put on variance terms. Either 1 (Inverse-Gamma) or 2 (Half-Cauchy)}
 
-\item{...}{Additional parameters passed (I DO NOT THINK WE NEED THIS)}
+\item{...}{Additional parameters passed}
 }
 \value{
 A list with the following components:

@@ -12,6 +12,5 @@
 #' @docType data
 #' @keywords datasets
 #' @name mathews_DLBCL
-#' @usage data(mathews_DLBCL)
-#' @format Something about the format
+#' @usage data("mathews_DLBCL")
 NULL
