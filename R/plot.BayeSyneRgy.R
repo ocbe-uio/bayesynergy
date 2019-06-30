@@ -220,7 +220,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
         hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
         #ell
-        hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+        hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
         title(xlab = "\u2113", cex.lab = 1.5)
         if(save_plot){
           dev.off()
@@ -236,7 +236,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
         hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
         #ell
-        hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+        hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
         title(xlab = "\u2113", cex.lab = 1.5)
         if(save_plot){
           dev.off()
@@ -319,7 +319,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
@@ -341,7 +341,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           if(save_plot){
             dev.off()
@@ -359,7 +359,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
@@ -378,7 +378,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           if(save_plot){
             dev.off()
@@ -501,7 +501,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
@@ -523,7 +523,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           if(save_plot){
             dev.off()
@@ -541,7 +541,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
@@ -560,7 +560,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
-          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(\u2113|y)"), cex.axis = 1.5)
+          hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~ell~"|y)"), cex.axis = 1.5)
           title(xlab = "\u2113", cex.lab = 1.5)
           if(save_plot){
             dev.off()
