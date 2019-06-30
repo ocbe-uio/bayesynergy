@@ -14,7 +14,7 @@
 #' @param Hyper_param A list of hyper parameters for the model. See *Details* for more information.
 #' @param GP_param A list of parameters for the GP kernel function. See *Details* for more information.
 #' @param var_prior Indicating which hyper-prior to put on variance terms. Either 1 (Inverse-Gamma) or 2 (Half-Cauchy)
-#' @param ... Additional parameters passed (I DO NOT THINK WE NEED THIS)
+#' @param ... Additional parameters passed
 #' 
 #' @details
 #'
