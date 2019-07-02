@@ -71,9 +71,9 @@ b1: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 1 \cr
 b2: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 2 \cr
 s2_Ec50_1: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 1 \cr
 s2_Ec50_2: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 2 \cr
-s2_gamma_0: \tab IG,HC \tab Hyperparameters for the variance of the gamma_0 spline parameter \cr
-s2_gamma_1: \tab IG,HC \tab Hyperparameters for the variance of the gamma_1 spline parameter \cr
-s2_gamma_2: \tab IG,HC \tab Hyperparameters for the variance of the gamma_2 spline parameter \cr
+s2_gamma_0: \tab IG,HC \tab Hyperparameters for the variance of the gamma_0 parameter \cr
+s2_gamma_1: \tab IG,HC \tab Hyperparameters for the variance of the gamma_1 parameter \cr
+s2_gamma_2: \tab IG,HC \tab Hyperparameters for the variance of the gamma_2 parameter \cr
 s2_eps: \tab IG,HC \tab Hyperparameters for the noise term \cr
 }
 For example, 'h_s2_eps' is a valid parameter name for a half-Cauchy prior on the noise term. This must be used in conjunction with \code{var_prior=2} for the half-cauchy option.
