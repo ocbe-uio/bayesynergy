@@ -1,7 +1,12 @@
 #' Bayesian semi-parametric modelling for in-vitro drug combination experiments
 #' 
 #' @description 
-#' The function BayeSyneRgy is the main wrapper function for the adaptive MCMC implementation.
+#' The function \code{BayeSyneRgy} is the main function of the BayeSyneRgy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects. 
+#' 
+#' Open the package vignette for more details:
+#' 
+#' \code{vignette("BayeSyneRgy", package = "BayeSyneRgy")}
+#' 
 #' 
 #'
 #' @param y_mat A matrix of responses, measured as share of viable cells after treatment. 
@@ -56,7 +61,7 @@
 #' }
 #' 
 #' 
-#' @return A list with the following components:
+#' @return An object of S3 class “\code{BayeSyneRgy}”, which is a list with the following components:
 #' \tabular{ll}{
 #' OUTPUT \tab a list containing samples from the posterior distribution.  \cr 
 #' data \tab the original data used to fit the model \cr

@@ -32,7 +32,7 @@ of the two drugs.}
 \item{...}{Additional parameters passed}
 }
 \value{
-A list with the following components:
+An object of S3 class “\code{BayeSyneRgy}”, which is a list with the following components:
 \tabular{ll}{
 OUTPUT \tab a list containing samples from the posterior distribution.  \cr 
 data \tab the original data used to fit the model \cr
@@ -47,7 +47,11 @@ Delta_mean \tab the average posterior mean of the interaction \cr
 }
 }
 \description{
-The function BayeSyneRgy is the main wrapper function for the adaptive MCMC implementation.
+The function \code{BayeSyneRgy} is the main function of the BayeSyneRgy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects. 
+
+Open the package vignette for more details:
+
+\code{vignette("BayeSyneRgy", package = "BayeSyneRgy")}
 }
 \details{
 The argument \strong{Alg_param} is a list specifying any changes to the default values of the adaptive MCMC sampler. Any element passed will overwrite the defaults.
