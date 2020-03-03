@@ -187,6 +187,18 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
     param_hyper <- modifyList(Hyper_param.default,Hyper_param)
   }
   
+  # Completing the grid in case missing values
+  # Complete the grid
+  unqA = sort(unique(x_mat[,1]))
+  unqB = sort(unique(x_mat[,2]))
+  X = as.matrix(expand.grid(unqA,unqB))
+  Y = matrix(NA,ncol=ncol(y_mat),nrow=nrow(X))
+  ind = match(data.frame(t(x_mat)),data.frame(t(X)))
+  Y[ind,] = y_mat
+  
+  x_mat = as.matrix(X)
+  y_mat = as.matrix(Y)
+  
   
   # Finally, check concentration scale (we want to use log10, but do a check on positive concentrations first)
   drug_names <- colnames(x_mat)

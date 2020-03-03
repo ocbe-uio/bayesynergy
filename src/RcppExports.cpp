@@ -22,14 +22,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // GPKernel
-arma::mat GPKernel(arma::mat x_vec, List model_spec);
-RcppExport SEXP _BayeSyneRgy_GPKernel(SEXP x_vecSEXP, SEXP model_specSEXP) {
+arma::mat GPKernel(arma::mat x_dist, List model_spec);
+RcppExport SEXP _BayeSyneRgy_GPKernel(SEXP x_distSEXP, SEXP model_specSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type x_vec(x_vecSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type x_dist(x_distSEXP);
     Rcpp::traits::input_parameter< List >::type model_spec(model_specSEXP);
-    rcpp_result_gen = Rcpp::wrap(GPKernel(x_vec, model_spec));
+    rcpp_result_gen = Rcpp::wrap(GPKernel(x_dist, model_spec));
     return rcpp_result_gen;
 END_RCPP
 }

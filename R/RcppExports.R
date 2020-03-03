@@ -5,8 +5,8 @@ BayeSynGibbs <- function(y_mat, x_mat, model_spec, Alg_param, Hyper_param) {
     .Call('_BayeSyneRgy_BayeSynGibbs', PACKAGE = 'BayeSyneRgy', y_mat, x_mat, model_spec, Alg_param, Hyper_param)
 }
 
-GPKernel <- function(x_vec, model_spec) {
-    .Call('_BayeSyneRgy_GPKernel', PACKAGE = 'BayeSyneRgy', x_vec, model_spec)
+GPKernel <- function(x_dist, model_spec) {
+    .Call('_BayeSyneRgy_GPKernel', PACKAGE = 'BayeSyneRgy', x_dist, model_spec)
 }
 
 computeDelta <- function(Delta_list, x1, x2) {

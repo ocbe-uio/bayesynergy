@@ -12,6 +12,23 @@ using namespace Rcpp;
 
 List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_param, List Hyper_param) {
   
+  
+ 
+  // Find missing values and create a working y_mat
+  arma::mat missing_y(y_mat.n_rows,y_mat.n_cols,arma::fill::zeros);
+  int n_missing = 0;
+  for (int i = 0; i < y_mat.n_rows; i++){
+    for (int j = 0; j < y_mat.n_cols; j++){
+      if (Rcpp::NumericVector::is_na(y_mat(i,j))){
+        missing_y(i,j) = 1;
+        n_missing++;
+      }
+    }
+  }
+  
+  arma::mat wy_mat(y_mat.n_rows,y_mat.n_cols,arma::fill::zeros);
+  
+  
   //INITIALIZE COMMON PARAMETERS AND OUTPUT ARRAYS
   //The difference is in the parameters of the splines/GP
   
@@ -146,6 +163,15 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   
   //GP
   bool update_ell = false, update_nu = false, update_alpha = false, update_sigma2_f = false;
+  
+  //x_distances for GP kernel calculations
+  arma::mat x_dist(n3,n3,arma::fill::eye);
+  for(int i = 0; i < n3; i++){
+    for(int j = i; j < n3; j++){
+      x_dist(i,j) = accu((x_mat.row(i) - x_mat.row(j)) % (x_mat.row(i) - x_mat.row(j)));
+      x_dist(j,i) = x_dist(i,j);
+    }
+  }
   
   double a_ell = 0, b_ell = 0, ell = 0, ell_accept = 0, s_ell = 0, a_nu = 0, b_nu = 0, nu = 0, nu_accept = 0, s_nu = 0, a_alpha = 0, b_alpha = 0, alpha = 0, alpha_accept = 0, s_alpha = 0, logdet_Kxx = 0, sign = 1, a_sigma2_f = 0, b_sigma2_f = 0, h_sigma2_f = 0, sigma2_f = 0, s_sigma2_f = 0, sigma2_f_accept = 0, ell_count = 0, nu_count = 0, alpha_count = 0, sigma2_f_count = 0;
   int sigma2_f_prior = 0;
@@ -328,7 +354,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       
     }
     
-    Kxx = GPKernel(x_mat, model_spec);
+    Kxx = GPKernel(x_dist, model_spec);
     //sigma2_f
     sigma2_f_prior = model_spec["sigma2_f_prior"];
     if(sigma2_f_prior == 0){//sigma2_f is fixed
@@ -422,6 +448,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   arma::mat Delta_new(n1,n2), Delta_trans_new(n1,n2), p0_new(n1,n2), p_ij_new(n1,n2), B_new(n1,n2);
   arma::vec f_1_new(n1,arma::fill::ones), f_2_new(n2,arma::fill::ones), p_ij_vec_new(n3);
   List Delta_list_new;
+  arma::rowvec y_rowtmp; 
   
   ///////////////////
   //  START GIBBS  //
@@ -429,7 +456,17 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   Progress progr(G, true);
   
   for(int g = 0; g < G; g++){
-
+    
+    // Start each iteration by filling in missing values
+    // This is done by sampling iid N(0,\sigma^2) and adding in row-wise means p_ij
+    // p_ij
+    for (int i = 0; i < y_mat.n_rows; i++){
+      y_rowtmp = y_mat.row(i);
+      y_rowtmp.replace(arma::datum::nan,0);
+      y_rowtmp = y_rowtmp+missing_y.row(i)%(p_ij_vec(i) + sqrt(s2_eps)*arma::randn(1,y_mat.n_cols));
+      wy_mat.row(i) = y_rowtmp;
+    }
+    
     //Slope1
     //Propose new value
     Slope_1_new = Slope_1 * exp(R::rnorm(0,1) * sqrt(s_Slope_1));
@@ -447,8 +484,9 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = a_Slope_1 *(log(Slope_1_new) - log(Slope_1)) - b_Slope_1 * (Slope_1_new - Slope_1);
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
-    
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    //are we here?
+    //Rcout << "Here we are! " << log_accept << std::endl;
     accept = 1;
     if( arma::is_finite(log_accept) ){
       if(log_accept < 0){
@@ -497,7 +535,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = a_Slope_2 *(log(Slope_2_new) - log(Slope_2)) - b_Slope_2 * (Slope_2_new - Slope_2);
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -547,7 +585,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = - 0.5 * (pow(Ec50_1_new,2) - pow(Ec50_1,2))/s2_Ec50_1;
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -597,7 +635,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = - 0.5 * (pow(Ec50_2_new,2) - pow(Ec50_2,2))/s2_Ec50_2;
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -647,7 +685,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = - 0.5 * (pow(gamma_0_new,2) - pow(gamma_0,2))/s2_gamma_0;
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -697,7 +735,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = - 0.5 * (pow(gamma_1_new,2) - pow(gamma_1,2))/s2_gamma_1;
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -747,7 +785,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = - 0.5 * (pow(gamma_2_new,2) - pow(gamma_2,2))/s2_gamma_2;
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -805,7 +843,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       //Computing MH ratio:
       z_new = sigma_aux_C * (vec_C_new - mu_C);    
       log_accept = - 0.5 * (accu(z_new % z_new) - accu(z % z));     
-      log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+      log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
       
       accept = 1;
       if( arma::is_finite(log_accept) ){
@@ -864,7 +902,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       //Computing MH ratio:
       z_new = sigma_aux_B * (vec_B_new - mu_B);    
       log_accept = - 0.5 * (accu(z_new % z_new) - accu(z % z))/sigma2_f;     
-      log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+      log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
       
       accept = 1;
       if( arma::is_finite(log_accept) ){
@@ -911,7 +949,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         
         model_spec_new = clone(model_spec);
         model_spec_new["ell"] = ell_new;
-        Kxx_new = GPKernel(x_mat, model_spec_new);
+        Kxx_new = GPKernel(x_dist, model_spec_new);
         arma::log_det( logdet_Kxx_new, sign, Kxx_new );
         sigma_aux_B_new = arma::trans(arma::chol(arma::inv(Kxx_new)));
         
@@ -958,7 +996,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         
         model_spec_new = clone(model_spec);
         model_spec_new["nu"] = nu_new;
-        Kxx_new = GPKernel(x_mat, model_spec_new);
+        Kxx_new = GPKernel(x_dist, model_spec_new);
         arma::log_det( logdet_Kxx_new, sign, Kxx_new );
         sigma_aux_B_new = arma::trans(arma::chol(arma::inv(Kxx_new)));
         
@@ -1004,7 +1042,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         
         model_spec_new = clone(model_spec);
         model_spec_new["alpha"] = alpha_new;
-        Kxx_new = GPKernel(x_mat, model_spec_new);
+        Kxx_new = GPKernel(x_dist, model_spec_new);
         arma::log_det( logdet_Kxx_new, sign, Kxx_new );
         sigma_aux_B_new = arma::trans(arma::chol(arma::inv(Kxx_new)));
         
@@ -1098,7 +1136,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     //Computing MH ratio:
     log_accept = a_b1 * (log(b_new(0)) - log(b(0))) - b_b1 * (b_new(0) - b(0)) + a_b2 * (log(b_new(1)) - log(b(1))) - b_b2 * (b_new(1) - b(1));
-    log_accept = log_accept + logaccept(y_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+    log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
     
     accept = 1;
     if( arma::is_finite(log_accept) ){
@@ -1135,7 +1173,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     }
     
     //Update variances
-    aux_s2eps =  -2 * logaccept(y_mat, p_ij_vec, p_ij_vec, 1, 0);
+    aux_s2eps =  -2 * logaccept(wy_mat, p_ij_vec, p_ij_vec, 1, 0);
     
     if(var_prior == 1){//IG update
       
@@ -1414,7 +1452,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       for(int r = 0; r < n_rep; r++){
         for(int i = 0; i < n1; i++){
           for(int j = 0; j < n2; j++){
-            CPO(r,i,j) = CPO(r,i,j) + 1 / R::dnorm(y_mat(j*n1 + i,r), p_ij(i,j), sqrt(s2_eps), 0);
+            CPO(r,i,j) = CPO(r,i,j) + 1 / R::dnorm(wy_mat(j*n1 + i,r), p_ij(i,j), sqrt(s2_eps), 0);
           }
         }
       }
@@ -1423,6 +1461,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     progr.increment(); 
   }
+  
   
   double LPML = -accu(log( CPO / n_save ));
   
