@@ -2,6 +2,9 @@
 
 An R package for Bayesian semi-parametric modelling of in-vitro drug combination experiments 
 
+## Updates
+
+03-03-20: Added support for missing values!
 
 
 
