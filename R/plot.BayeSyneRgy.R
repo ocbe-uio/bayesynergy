@@ -7,6 +7,7 @@
 #' @param contour_levels the contour levels
 #' @param plot_type which plots to display. Either "2D" for two-dimensional contour plots, "3D" for interactive three-dimensional plots of the surfaces, or "both" for both these options.
 #' @param save_plot logical; if TRUE, plots are saved locally
+#' @param path string; path for saving plots, if NULL default is work directory
 #' @param ... further arguments passed to or from other methods.
 #' 
 #' @details 
@@ -23,7 +24,7 @@
 #' @export 
 
 
-plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_type = "2D", save_plot = FALSE, ...){
+plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_type = "2D", save_plot = FALSE, path=NULL, ...){
   
   # Removed attach here, so need to declare some variables properly
   type <- x$type
@@ -32,6 +33,18 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
   for(i in 1:length(drug_names)){
     drug_names_forplot[i] <- str_replace(drug_names[i], " ", "_")
   }
+  experiment_ID <- x$experiment_ID
+  
+  if (is.null(path)){
+    path <- getwd()
+  } else{
+    # Check if supplied path exists
+    if (!dir.exists(path)){
+      print("Invalid path")
+      stop()
+    }
+  }
+
   
   data <- x$data
   x_mat <- data$x_mat
@@ -42,8 +55,8 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
   p_ij_mean <- x$p_ij_mean
   p_0_mean <- x$p_0_mean
   Delta_mean <- x$Delta_mean
-  DSS_1 <- x$Summary_Output[[5]]
-  DSS_2 <- x$Summary_Output[[6]]
+  DSS_1 <- x$Summary_Output[[7]]
+  DSS_2 <- x$Summary_Output[[8]]
   rVUS_p <- x$Summary_Output$rVUS_p
   rVUS_Delta <- x$Summary_Output$rVUS_Delta
   rVUS_syn <- x$Summary_Output$rVUS_syn
@@ -114,15 +127,15 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
   
   if(plot_2D){
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "ResponseContour.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "ResponseContour.pdf", sep = "_")))
     }
     
     
     par(mar = c(6,5,6,5))
     #p_ij
     filled.contour(x = x1,y = x2, z = p_ij_mean, levels = seq(0, 1, by = 0.1),
-                   plot.title = title(main = bquote(hat(p)[ij]), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
-                   plot.axes = {axis(1, round(x1,2)); axis(2, round(x2,2)); contour(x = x1,y = x2, z = p_ij_mean, levels = contour_levels, labels = contour_levels, lwd = 2, col = "red", add = add_contour)},
+                   plot.title = title(main = bquote(.(experiment_ID) : hat(p)[ij]), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
+                   plot.axes = {axis(1, round(x1,2),labels=c(0,round(10^x1[-1],2))); axis(2, round(x2,2),labels=c(0,round(10^x2[-1],2))); contour(x = x1,y = x2, z = p_ij_mean, levels = contour_levels, labels = contour_levels, lwd = 2, col = "red", add = add_contour)},
                    color.palette = viridis,
                    key.title = title(main=""),
                    key.axes = axis(4, seq(0, 1, by = 0.1)) )
@@ -133,14 +146,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "BaselineContour.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "BaselineContour.pdf", sep = "_")))
     }
     
     par(mar = c(6,5,6,5))
     #p_0
     filled.contour(x = x1,y = x2, z = p_0_mean, levels = seq(0, 1, by = 0.1),
-                   plot.title = title(main = bquote(hat(p)[ij]^0), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
-                   plot.axes = {axis(1, round(x1,2)); axis(2, round(x2,2))},
+                   plot.title = title(main = bquote(.(experiment_ID) : hat(p)[ij]^0), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
+                   plot.axes = {axis(1, round(x1,2),labels=c(0,round(10^x1[-1],2))); axis(2, round(x2,2),labels=c(0,round(10^x2[-1],2)))},
                    color.palette = viridis,
                    key.title = title(main=""),
                    key.axes = axis(4, seq(0, 1, by = 0.1)) )
@@ -151,14 +164,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "InteractionContour.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "InteractionContour.pdf", sep = "_")))
     }
     
     par(mar = c(6,5,6,5))
     #Delta_ij
     filled.contour(x = x1,y = x2, z = Delta_mean, levels = seq(-1,1,by = 0.1),
-                   plot.title = title(main = bquote(hat(Delta)[ij]), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
-                   plot.axes = {axis(1, round(x1,2)); axis(2, round(x2,2)); contour(x = x1,y = x2, z = Delta_mean, levels = 0, labels = 0, lty = 2, lwd = 2, col = "grey", add = TRUE)},
+                   plot.title = title(main = bquote(.(experiment_ID) : hat(Delta)[ij]), xlab = drug_names[1], ylab = drug_names[2], cex.main = 2.5, cex.lab = 2),
+                   plot.axes = {axis(1, round(x1,2),labels=c(0,round(10^x1[-1],2))); axis(2, round(x2,2),labels=c(0,round(10^x2[-1],2))); contour(x = x1,y = x2, z = Delta_mean, levels = 0, labels = 0, lty = 2, lwd = 2, col = "grey", add = TRUE)},
                    color.palette = Delta_col_palette,
                    key.title = title(main=""),
                    key.axes = axis(4, seq(-1,1,by = 0.25)) )
@@ -176,15 +189,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
   
   if(type == 1){
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "S2eps_DSS.pdf", sep = "_"), width = 10, height = 5)
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "S2eps_DSS.pdf", sep = "_")), width = 10, height = 5)
     }
-    par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+    par(mfrow = c(1,3), mar = c(7.5,5,5,5))
     #s2_eps
     hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
     title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
     #DSS first and second drugs
     hist(DSS_1, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[1], sep = ""), cex.axis = 1.5)
     hist(DSS_2, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[2], sep = ""), cex.axis = 1.5)
+    mtext(paste0(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2]),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -192,13 +206,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_"), width = 10, height = 5)
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_")), width = 10, height = 5)
     }
-    par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(2,2), mar = c(7.5,5,5,5))
     hist(rVUS_p, col = "lightblue", probability = TRUE, breaks = 30, xlab = "rVUS(1 - p)", ylab = "", main = "Overall efficacy", cex.axis = 1.5)
     hist(rVUS_Delta, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(|"~Delta~"|)"), ylab = "", main = "Overall interaction", cex.axis = 1.5)
     hist(rVUS_syn, col = "lightblue", probability = TRUE, breaks = 30, xlab = expression("rVUS(" ~ Delta^{phantom()+phantom()} ~ ")"), ylab = "", main = "Synergistic interaction", cex.axis = 1.5)
     hist(rVUS_ant, col = "lightblue", probability = TRUE, breaks = 30, xlab = expression("rVUS(" ~ Delta^{phantom()-phantom()} ~ ")"), ylab = "", main = "Antagonistic interaction", cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -210,9 +225,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     if(var(ELL) != 0){
       if(var(SIGMA2_F) != 0){
         if(save_plot){
-          pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+          pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
         }
-        par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+        par(mfrow = c(1,3), mar = c(7.5,5,5,5))
         #s2_eps
         hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -222,6 +237,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
         #ell
         hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
         title(xlab = "l", cex.lab = 1.5)
+        mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
         if(save_plot){
           dev.off()
         }else{
@@ -229,15 +245,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
         }
       }else{
         if(save_plot){
-          pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+          pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
         }
-        par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+        par(mfrow = c(1,2), mar = c(7.5,5,5,5))
         #s2_eps
         hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
         #ell
         hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
         title(xlab = "l", cex.lab = 1.5)
+        mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
         if(save_plot){
           dev.off()
         }else{
@@ -247,15 +264,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }else{
       if(var(SIGMA2_F) != 0){
         if(save_plot){
-          pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+          pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
         }
-        par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+        par(mfrow = c(1,2), mar = c(7.5,5,5,5))
         #s2_eps
         hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[epsilon]^2) , cex.lab = 1.5)
         #sigma2_f
         hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
         title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
+        mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
         if(save_plot){
           dev.off()
         }else{
@@ -263,7 +281,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
         }
       }else{
         if(save_plot){
-          pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+          pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
         }
         #s2_eps
         hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
@@ -277,12 +295,13 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_"), width = 10, height = 5)
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_")), width = 10, height = 5)
     }
     #DSS first and second drugs
-    par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(1,2), mar = c(7.5,5,5,5))
     hist(DSS_1, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[1], sep = ""), cex.axis = 1.5)
     hist(DSS_2, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[2], sep = ""), cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -290,13 +309,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_")))
     }
-    par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(2,2), mar = c(7.5,5,5,5))
     hist(rVUS_p, col = "lightblue", probability = TRUE, breaks = 30, xlab = "rVUS(1 - p)", ylab = "", main = "Overall efficacy", cex.axis = 1.5)
     hist(rVUS_Delta, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(|"~Delta~"|)"), ylab = "", main = "Overall interaction", cex.axis = 1.5)
     hist(rVUS_syn, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()+phantom()} ~ ")"), ylab = "", main = "Synergistic interaction", cex.axis = 1.5)
     hist(rVUS_ant, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()-phantom()} ~ ")"), ylab = "", main = "Antagonistic interaction", cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -309,9 +329,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       if(var(SIGMA2_F) != 0){
         if(var(NU) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(2,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -324,6 +344,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
           title(xlab = expression(nu), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -331,9 +352,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -343,6 +364,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #ell
           hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
           title(xlab = "l", cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -352,9 +374,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       }else{
         if(var(NU) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -364,6 +386,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
           title(xlab = expression(nu), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -371,15 +394,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
           hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
           title(xlab = "l", cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -391,9 +415,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       if(var(SIGMA2_F) != 0){
         if(var(NU) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -403,6 +427,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
           title(xlab = expression(nu), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -410,15 +435,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #sigma2_f
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -428,15 +454,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       }else{
         if(var(NU) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main =bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #nu
           hist(NU, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~nu~"|y)"), cex.axis = 1.5)
           title(xlab = expression(nu), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -444,11 +471,12 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -459,12 +487,13 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_"), width = 10, height = 5)
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_")), width = 10, height = 5)
     }
     #DSS first and second drugs
-    par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(1,2), mar = c(7.5,5,5,5))
     hist(DSS_1, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[1], sep = ""), cex.axis = 1.5)
     hist(DSS_2, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[2], sep = ""), cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -472,13 +501,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_")))
     }
-    par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(2,2), mar = c(7.5,5,5,5))
     hist(rVUS_p, col = "lightblue", probability = TRUE, breaks = 30, xlab = "rVUS(1 - p)", ylab = "", main = "Overall efficacy", cex.axis = 1.5)
     hist(rVUS_Delta, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(|"~Delta~"|)"), ylab = "", main = "Overall interaction", cex.axis = 1.5)
     hist(rVUS_syn, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()+phantom()} ~ ")"), ylab = "", main = "Synergistic interaction", cex.axis = 1.5)
     hist(rVUS_ant, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()-phantom()} ~ ")"), ylab = "", main = "Antagonistic interaction", cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -491,9 +521,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       if(var(SIGMA2_F) != 0){
         if(var(ALPHA) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(2,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -506,6 +536,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
           title(xlab = expression(alpha), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -513,9 +544,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -525,6 +556,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #ell
           hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
           title(xlab = "l", cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -534,9 +566,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       }else{
         if(var(ALPHA) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -546,6 +578,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
           title(xlab = expression(alpha), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -553,15 +586,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #ell
           hist(ELL, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P(l|y)"), cex.axis = 1.5)
           title(xlab = "l", cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -573,9 +607,9 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       if(var(SIGMA2_F) != 0){
         if(var(ALPHA) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,3), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,3), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
@@ -585,6 +619,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
           title(xlab = expression(alpha), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -592,15 +627,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #sigma2_f
           hist(SIGMA2_F, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[f]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[f]^2), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -610,15 +646,16 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
       }else{
         if(var(ALPHA) != 0){
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
-          par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+          par(mfrow = c(1,2), mar = c(7.5,5,5,5))
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main =bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
           #alpha
           hist(ALPHA, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~alpha~"|y)"), cex.axis = 1.5)
           title(xlab = expression(alpha), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -626,11 +663,12 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
           }
         }else{
           if(save_plot){
-            pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_"), width = 10, height = 5)
+            pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "Histograms.pdf", sep = "_")), width = 10, height = 5)
           }
           #s2_eps
           hist(S2_EPS, col = "lightblue", probability = TRUE, breaks = 30, xlab = "", ylab = "", main = bquote("P("~sigma[epsilon]^2~"|y)"), cex.axis = 1.5)
           title(xlab = expression(sigma[epsilon]^2), cex.lab = 1.5)
+          mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
           if(save_plot){
             dev.off()
           }else{
@@ -642,12 +680,13 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     readline("Press key for next plot")
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_"), width = 10, height = 5)
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "DSS.pdf", sep = "_")), width = 10, height = 5)
     }
     #DSS first and second drugs
-    par(mfrow = c(1,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(1,2), mar = c(7.5,5,5,5))
     hist(DSS_1, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[1], sep = ""), cex.axis = 1.5)
     hist(DSS_2, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[2], sep = ""), cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
@@ -655,13 +694,14 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     }
     
     if(save_plot){
-      pdf(paste(drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_"))
+      pdf(paste0(path,paste(experiment_ID,drug_names_forplot[1], drug_names_forplot[2], "rVUS.pdf", sep = "_")))
     }
-    par(mfrow = c(2,2), mar = c(5,7.5,5,5))
+    par(mfrow = c(2,2), mar = c(7.5,5,5,5))
     hist(rVUS_p, col = "lightblue", probability = TRUE, breaks = 30, xlab = "rVUS(1 - p)", ylab = "", main = "Overall efficacy", cex.axis = 1.5)
     hist(rVUS_Delta, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(|"~Delta~"|)"), ylab = "", main = "Overall interaction", cex.axis = 1.5)
     hist(rVUS_syn, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()+phantom()} ~")"), ylab = "", main = "Synergistic interaction", cex.axis = 1.5)
     hist(rVUS_ant, col = "lightblue", probability = TRUE, breaks = 30, xlab = bquote("rVUS(" ~ Delta^{phantom()-phantom()} ~")"), ylab = "", main = "Antagonistic interaction", cex.axis = 1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2],sep=" "),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{

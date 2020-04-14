@@ -6,7 +6,8 @@
 \alias{BayeSyneRgy-package}
 \title{BayeSyneRgy}
 \usage{
-BayeSyneRgy(y_mat, x_mat, log10_conc = FALSE, type = 2,
+BayeSyneRgy(y_mat, x_mat, drug_names = NULL, experiment_ID = NULL,
+  log10_conc = FALSE, lower_asymptote = T, type = 2,
   Alg_param = list(), Hyper_param = list(), GP_param = list(),
   var_prior = 1, ...)
 }
@@ -17,7 +18,13 @@ Each row corresponds to a unique concentration (x1,x2), while columns represents
 \item{x_mat}{A matrix of drug concentrations, each row corresponds to a unique concentration (x1,x2)
 of the two drugs.}
 
+\item{drug_names}{vector; a character vector containing the names of the drugs involved}
+
+\item{experiment_ID}{character; name of cell line or other identifier of experiment}
+
 \item{log10_conc}{logical; if true, concentrations must be given on the log10 scale, and monotherapies must have value -Inf for the drug with concentration zero.}
+
+\item{lower_asymptote}{logical; if true, lower asymptotes are estimated for the monotherapies}
 
 \item{type}{integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).}
 
@@ -39,6 +46,7 @@ data \tab the original data used to fit the model \cr
 type \tab the type of model that was run. \cr
 Alg_param \tab the parameters used for the MCMC sampler \cr
 Hyper_param \tab the hyperparameters used for the prior distributions \cr
+experiment_ID \tab the experiment identifier \cr
 drug_names \tab the name of the drugs used in the experiment, taken from the column names of the concentration matrix. Used for plotting. \cr
 Summary_Output \tab a list containing summary statistics calculated from the MCMC chains \cr
 p_ij_mean \tab the response matrix \cr
@@ -71,8 +79,10 @@ All parameters are prefixed with either 'a_' and 'b_' for the Gamma or Inverse-G
 \tabular{lll}{
 Slope_1: \tab G \tab Hyper-parameters for monotherapy slope of drug 1 \cr
 Slope_2: \tab G \tab Hyper-parameters for monotherapy slope of drug 2 \cr
-b1: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 1 \cr
-b2: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 2 \cr
+La_1: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 1 \cr
+La_2: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 2 \cr
+b1: \tab G \tab Hyper-parameters regulating the behaviour of the transformation g() \cr
+b2: \tab G \tab Hyper-parameters regulating the behaviour of the transformation g() \cr
 s2_Ec50_1: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 1 \cr
 s2_Ec50_2: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 2 \cr
 s2_gamma_0: \tab IG,HC \tab Hyperparameters for the variance of the gamma_0 parameter \cr

@@ -13,7 +13,10 @@
 #' Each row corresponds to a unique concentration (x1,x2), while columns represents replicates.
 #' @param x_mat A matrix of drug concentrations, each row corresponds to a unique concentration (x1,x2)
 #' of the two drugs.
+#' @param drug_names vector; a character vector containing the names of the drugs involved
+#' @param experiment_ID character; name of cell line or other identifier of experiment
 #' @param log10_conc logical; if true, concentrations must be given on the log10 scale, and monotherapies must have value -Inf for the drug with concentration zero.
+#' @param lower_asymptote logical; if true, lower asymptotes are estimated for the monotherapies
 #' @param type integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).
 #' @param Alg_param A list of parameters for the adaptive MCMC algorithm. See *Details* for more information.
 #' @param Hyper_param A list of hyper parameters for the model. See *Details* for more information.
@@ -40,8 +43,10 @@
 #' \tabular{lll}{
 #' Slope_1: \tab G \tab Hyper-parameters for monotherapy slope of drug 1 \cr
 #' Slope_2: \tab G \tab Hyper-parameters for monotherapy slope of drug 2 \cr
-#' b1: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 1 \cr
-#' b2: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 2 \cr
+#' La_1: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 1 \cr
+#' La_2: \tab G \tab Hyper-parameters for monotherapy lower asymptote of drug 2 \cr
+#' b1: \tab G \tab Hyper-parameters regulating the behaviour of the transformation g() \cr
+#' b2: \tab G \tab Hyper-parameters regulating the behaviour of the transformation g() \cr
 #' s2_Ec50_1: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 1 \cr
 #' s2_Ec50_2: \tab IG,HC \tab Hyperparameters for the variance of the EC-50 for drug 2 \cr
 #' s2_gamma_0: \tab IG,HC \tab Hyperparameters for the variance of the gamma_0 parameter \cr
@@ -68,6 +73,7 @@
 #' type \tab the type of model that was run. \cr
 #' Alg_param \tab the parameters used for the MCMC sampler \cr
 #' Hyper_param \tab the hyperparameters used for the prior distributions \cr
+#' experiment_ID \tab the experiment identifier \cr
 #' drug_names \tab the name of the drugs used in the experiment, taken from the column names of the concentration matrix. Used for plotting. \cr
 #' Summary_Output \tab a list containing summary statistics calculated from the MCMC chains \cr
 #' p_ij_mean \tab the response matrix \cr
@@ -90,7 +96,7 @@
 #' 
 #' @import utils plot3D viridis rgl grDevices graphics stats coda mvnfast caTools stringr
 
-BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = list(), Hyper_param = list(), GP_param = list(), var_prior = 1, ...){
+BayeSyneRgy <- function(y_mat, x_mat, drug_names=NULL, experiment_ID = NULL, log10_conc = FALSE, lower_asymptote = T, type = 2, Alg_param = list(), Hyper_param = list(), GP_param = list(), var_prior = 1, ...){
   
   # Below are defaults for all GP parameters, depending on which type of model is chosen
   GP_param.default <- list(ell = c(1,1), nu = 5/2, alpha = 1, sigma2_f = 1, sigma2_f_prior = 0)
@@ -141,22 +147,22 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
       return()}}
   
   if(type==1){
-    model_spec <- list(type=type)
+    model_spec <- list(type=type, lower_asymptote=lower_asymptote)
   }
   if(type==2){
-    model_spec <- list(type=type, ell=GP_param$ell,sigma2_f = GP_param$sigma2_f, 
+    model_spec <- list(type=type, lower_asymptote=lower_asymptote, ell=GP_param$ell,sigma2_f = GP_param$sigma2_f, 
                        sigma2_f_prior = GP_param$sigma2_f_prior,
                        a_sigma2_f = GP_param$sigma2_f[1], b_sigma2_f = GP_param$sigma2_f[2],
                        h_sigma2_f = GP_param$sigma2_f[1])
   }
   if(type==3){
-    model_spec <- list(type=type, ell = GP_param$ell, nu = GP_param$nu,sigma2_f = GP_param$sigma2_f, 
+    model_spec <- list(type=type, lower_asymptote=lower_asymptote, ell = GP_param$ell, nu = GP_param$nu,sigma2_f = GP_param$sigma2_f, 
                        sigma2_f_prior = GP_param$sigma2_f_prior,
                        a_sigma2_f = GP_param$sigma2_f[1], b_sigma2_f = GP_param$sigma2_f[2],
                        h_sigma2_f = GP_param$sigma2_f[1])
   }
   if(type==4){
-    model_spec <- list(type=type, ell=GP_param$ell,alpha=GP_param$alpha,sigma2_f = GP_param$sigma2_f, 
+    model_spec <- list(type=type, lower_asymptote=lower_asymptote, ell=GP_param$ell,alpha=GP_param$alpha,sigma2_f = GP_param$sigma2_f, 
                        sigma2_f_prior = GP_param$sigma2_f_prior,
                        a_sigma2_f = GP_param$sigma2_f[1], b_sigma2_f = GP_param$sigma2_f[2],
                        h_sigma2_f = GP_param$sigma2_f[1])
@@ -169,6 +175,7 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   
   # Defaul prior for variances is IG(3,2)
   Hyper_param.default <- list(a_Slope_1 = 1, b_Slope_1 =  1, a_Slope_2 = 1, b_Slope_2 =  1, 
+                              a_La_1 = 0.5, b_La_1 = 0.5, a_La_2 = 0.5, b_La_2 = 0.5,
                               a_s2_gamma_0 = 3, b_s2_gamma_0 =  2, a_s2_gamma_1 = 3, b_s2_gamma_1 =  2, 
                               a_s2_gamma_2 = 3, b_s2_gamma_2 =  2, a_s2_eps = 3, b_s2_eps = 2, 
                               a_s2_Ec50_1 = 3, b_s2_Ec50_1 = 2, a_s2_Ec50_2 = 3, b_s2_Ec50_2 = 2,
@@ -180,6 +187,7 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   
   if(var_prior==2){# HC
     Hyper_param.default <- list(a_Slope_1 = 1, b_Slope_1 = 1, a_Slope_2 = 1, b_Slope_2 = 1,
+                                a_La_1 = 0.5, b_La_1 = 0.5, a_La_2 = 0.5, b_La_2 = 0.5,
                                 h_s2_gamma_0 = 1, h_s2_gamma_1 = 1,
                                 h_s2_gamma_2 = 1, h_s2_eps = 1,
                                 h_s2_Ec50_1 = 1, h_s2_Ec50_2 = 1,
@@ -196,12 +204,20 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   ind = match(data.frame(t(x_mat)),data.frame(t(X)))
   Y[ind,] = y_mat
   
+  if (is.null(drug_names)){
+    drug_names <- colnames(x_mat)
+  }
+  if (is.null(experiment_ID)){
+    experiment_ID = ""
+  }
+  
+  
   x_mat = as.matrix(X)
   y_mat = as.matrix(Y)
   
   
   # Finally, check concentration scale (we want to use log10, but do a check on positive concentrations first)
-  drug_names <- colnames(x_mat)
+  
   
   if(log10_conc){
     x_mat <- 10^x_mat
@@ -226,10 +242,12 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   
   #Use OUTPUT to compute quantities of interest directly
   MCMC_Output <- OUTPUT$MCMC_Output
-  SLOPE_1 <- MCMC_Output$SLOPE_1
-  SLOPE_2 <- MCMC_Output$SLOPE_2
-  EC50_1 <- MCMC_Output$EC50_1
-  EC50_2 <- MCMC_Output$EC50_2
+  SLOPE_1 <- MCMC_Output$MONO$SLOPE_1
+  SLOPE_2 <- MCMC_Output$MONO$SLOPE_2
+  EC50_1 <- MCMC_Output$MONO$EC50_1
+  EC50_2 <- MCMC_Output$MONO$EC50_2
+  LA_1 <- MCMC_Output$MONO$LA_1
+  LA_2 <- MCMC_Output$MONO$LA_2
   GAMMA_0 <- MCMC_Output$GAMMA_0
   GAMMA_1 <- MCMC_Output$GAMMA_1
   GAMMA_2 <- MCMC_Output$GAMMA_2
@@ -259,7 +277,8 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   id <- matrix(1, n1, n2)
   id[1,] <- 0
   id[,1] <- 0
-  n_save <- length(MCMC_Output[[1]])
+  n_save <- param_alg$n_save
+  #n_save <- length(MCMC_Output[[1]])
   
   #Mean surfaces and other quantities of interest
   p_0_mean <- matrix(0,n1,n2)
@@ -278,9 +297,9 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
     K2 <- dim(B_K3[[1,1]])[2]
     
     for(g in 1:n_save){
-      f_1_g <- (1 + 10^(SLOPE_1[g] * (x1 - EC50_1[g])))^(-1)
+      f_1_g <- LA_1[g]+(1-LA_1[g])*(1 + 10^(SLOPE_1[g] * (x1 - EC50_1[g])))^(-1)
       f_1_g[1] <- 1
-      f_2_g <- (1 + 10^(SLOPE_2[g] * (x2 - EC50_2[g])))^(-1)
+      f_2_g <- LA_2[g]+(1-LA_2[g])*(1 + 10^(SLOPE_2[g] * (x2 - EC50_2[g])))^(-1)
       f_2_g[1] <- 1
       p_0_g <- matrix(f_1_g, nrow = n1, ncol = n2) * matrix(f_2_g, nrow = n1, ncol = n2, byrow = TRUE)
       
@@ -299,10 +318,10 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
       Delta_mean <- Delta_mean + Delta_trans
       
       #Compute DSS scores for the two drugs (the integral is always well-defined for this model)
-      AUC1 = (max_c1 - min_c1) - (log10(1 + 10^(SLOPE_1[g] * (max_c1 - EC50_1[g]))) - log10(1 + 10^(SLOPE_1[g] * (min_c1 - EC50_1[g]))))/SLOPE_1[g];
+      AUC1 = (max_c1 - min_c1) + (log10(1 + 10^(SLOPE_1[g] * (max_c1 - EC50_1[g]))) - log10(1 + 10^(SLOPE_1[g] * (min_c1 - EC50_1[g]))))*(LA_1[g]-1)/SLOPE_1[g];
       DSS_1[g] <- 100*(1 - AUC1/(max_c1 - min_c1))
       
-      AUC2 = (max_c2 - min_c2) - (log10(1 + 10^(SLOPE_2[g] * (max_c2 - EC50_2[g]))) - log10(1 + 10^(SLOPE_2[g] * (min_c2 - EC50_2[g]))))/SLOPE_2[g];
+      AUC2 = (max_c2 - min_c2) + (log10(1 + 10^(SLOPE_2[g] * (max_c2 - EC50_2[g]))) - log10(1 + 10^(SLOPE_2[g] * (min_c2 - EC50_2[g]))))*(LA_2[g]-1)/SLOPE_2[g];
       DSS_2[g] <- 100*(1 - AUC2/(max_c2 - min_c2))
       
       #Overall efficacy
@@ -323,9 +342,9 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   }else{#GP models
     
     for(g in 1:n_save){
-      f_1_g <- (1 + 10^(SLOPE_1[g] * (x1 - EC50_1[g])))^(-1)
+      f_1_g <- LA_1[g]+(1-LA_1[g])*(1 + 10^(SLOPE_1[g] * (x1 - EC50_1[g])))^(-1)
       f_1_g[1] <- 1
-      f_2_g <- (1 + 10^(SLOPE_2[g] * (x2 - EC50_2[g])))^(-1)
+      f_2_g <- LA_2[g]+(1-LA_2[g])*(1 + 10^(SLOPE_2[g] * (x2 - EC50_2[g])))^(-1)
       f_2_g[1] <- 1
       p_0_g <- matrix(f_1_g, nrow = n1, ncol = n2) * matrix(f_2_g, nrow = n1, ncol = n2, byrow = TRUE)
       
@@ -338,10 +357,10 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
       Delta_mean <- Delta_mean + Delta_trans
       
       #Compute DSS scores for the two drugs (the integral is always well-defined for this model)
-      AUC1 = (max_c1 - min_c1) - (log10(1 + 10^(SLOPE_1[g] * (max_c1 - EC50_1[g]))) - log10(1 + 10^(SLOPE_1[g] * (min_c1 - EC50_1[g]))))/SLOPE_1[g];
+      AUC1 = (max_c1 - min_c1) + (log10(1 + 10^(SLOPE_1[g] * (max_c1 - EC50_1[g]))) - log10(1 + 10^(SLOPE_1[g] * (min_c1 - EC50_1[g]))))*(LA_1[g]-1)/SLOPE_1[g];
       DSS_1[g] <- 100*(1 - AUC1/(max_c1 - min_c1))
       
-      AUC2 = (max_c2 - min_c2) - (log10(1 + 10^(SLOPE_2[g] * (max_c2 - EC50_2[g]))) - log10(1 + 10^(SLOPE_2[g] * (min_c2 - EC50_2[g]))))/SLOPE_2[g];
+      AUC2 = (max_c2 - min_c2) + (log10(1 + 10^(SLOPE_2[g] * (max_c2 - EC50_2[g]))) - log10(1 + 10^(SLOPE_2[g] * (min_c2 - EC50_2[g]))))*(LA_2[g]-1)/SLOPE_2[g];
       DSS_2[g] <- 100*(1 - AUC2/(max_c2 - min_c2))
       
       #Overall efficacy
@@ -371,17 +390,20 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   Summary_Output[[2]] <- EC50_2
   Summary_Output[[3]] <- SLOPE_1
   Summary_Output[[4]] <- SLOPE_2
-  Summary_Output[[5]] <- DSS_1
-  Summary_Output[[6]] <- DSS_2
-  Summary_Output[[7]] <- S2_EPS
-  Summary_Output[[8]] <- rVUS_p
-  Summary_Output[[9]] <- rVUS_Delta
-  Summary_Output[[10]] <- rVUS_syn
-  Summary_Output[[11]] <- rVUS_ant
+  Summary_Output[[5]] <- LA_1
+  Summary_Output[[6]] <- LA_2
+  Summary_Output[[7]] <- DSS_1
+  Summary_Output[[8]] <- DSS_2
+  Summary_Output[[9]] <- S2_EPS
+  Summary_Output[[10]] <- rVUS_p
+  Summary_Output[[11]] <- rVUS_Delta
+  Summary_Output[[12]] <- rVUS_syn
+  Summary_Output[[13]] <- rVUS_ant
   
-  drug_names <- colnames(x_mat)
+  
   names(Summary_Output) <- c(paste("EC50 (", drug_names[1], ")", sep = ""), paste("EC50 (", drug_names[2], ")", sep = ""),
                              paste("Slope (", drug_names[1], ")", sep = ""), paste("Slope (", drug_names[2], ")", sep = ""),
+                             paste("LowAsymp (", drug_names[1], ")", sep=""), paste("LowAsymp (", drug_names[2], ")", sep=""),
                              paste("DSS (", drug_names[1], ")", sep = ""), paste("DSS (", drug_names[2], ")", sep = ""),
                              "S2_EPS", "rVUS_p", "rVUS_Delta", "rVUS_syn", "rVUS_ant")
   
@@ -391,9 +413,11 @@ BayeSyneRgy <- function(y_mat, x_mat, log10_conc = FALSE, type = 2, Alg_param = 
   BayeSyn_Out$OUTPUT <- OUTPUT
   BayeSyn_Out$data <- list("y_mat" = y_mat, "x_mat" = x_mat)
   BayeSyn_Out$type <- type
+  BayeSyn_Out$lower_asymptote <- lower_asymptote
   BayeSyn_Out$Alg_param <- param_alg
   BayeSyn_Out$Hyper_param <- param_hyper
   BayeSyn_Out$drug_names <- drug_names
+  BayeSyn_Out$experiment_ID <- experiment_ID
   BayeSyn_Out$Summary_Output <- Summary_Output
   BayeSyn_Out$p_ij_mean <- p_ij_mean
   BayeSyn_Out$p_0_mean <- p_0_mean

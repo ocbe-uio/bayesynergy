@@ -86,11 +86,18 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   double Ec50_1_accept = 0;
   double Ec50_1_count = 0;
   double s_Ec50_1 = 0.01;
+  //LowerAsymptote
+  double La_1 = 0.5;
+  double La_1_accept = 0;
+  double La_1_count = 0;
+  double s_La_1 = 0.01;
+  double a_La_1 = Hyper_param["a_La_1"];
+  double b_La_1 = Hyper_param["b_La_1"];
+  
+
   
   arma::colvec f_1(n1,arma::fill::ones);
-  for(int i = 1; i < n1; i++){
-    f_1(i) = pow(1 + pow(10,Slope_1 * (x1(i) - Ec50_1)),-1);
-  }
+
   
   //Log-Logistic curve f_2
   //Slope
@@ -105,10 +112,18 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   double Ec50_2_accept = 0;
   double Ec50_2_count = 0;
   double s_Ec50_2 = 0.01;
+  //LowerAsymptote
+  double La_2 = 0.5;
+  double La_2_accept = 0;
+  double La_2_count = 0;
+  double s_La_2 = 0.01;
+  double a_La_2 = Hyper_param["a_La_2"];
+  double b_La_2 = Hyper_param["b_La_2"];
   
   arma::colvec f_2(n2,arma::fill::ones);
   for(int j = 1; j < n2; j++){
-    f_2(j) = pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
+    // f_2(j) = pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
+    f_2(j) = La_2 + (1-La_2)*pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
   }
   
   //Compute baseline level
@@ -180,6 +195,11 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   
   List model_spec_new;
   int type = model_spec["type"];
+  bool update_LA = model_spec["lower_asymptote"];
+  if(!update_LA){
+    La_1 = 0;
+    La_2 = 0;
+  }
   if(type == 1){//Spline model
     
     //Spline of degree 3
@@ -427,7 +447,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   }
   
   //Output matrices
-  arma::vec EC50_1(n_save,arma::fill::zeros), SLOPE_1(n_save,arma::fill::zeros), EC50_2(n_save,arma::fill::zeros), SLOPE_2(n_save,arma::fill::zeros);
+  arma::vec EC50_1(n_save,arma::fill::zeros), SLOPE_1(n_save,arma::fill::zeros), LA_1(n_save,arma::fill::zeros), EC50_2(n_save,arma::fill::zeros), SLOPE_2(n_save,arma::fill::zeros),LA_2(n_save,arma::fill::zeros);
   arma::vec GAMMA_0(n_save,arma::fill::zeros), GAMMA_1(n_save,arma::fill::zeros), GAMMA_2(n_save,arma::fill::zeros);
   
   if(type != 1){//GP does not need the matrix C_OUT, but we intialise it or we get an error
@@ -444,7 +464,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   arma::cube CPO(n_rep,n1,n2,arma::fill::zeros);
   
   //Additional variables
-  double log_accept, accept, Ec50_1_new, Ec50_2_new, Slope_1_new, Slope_2_new, gamma_0_new, gamma_1_new, gamma_2_new, ell_new, nu_new, alpha_new, logdet_Kxx_new, sigma2_f_new;
+  double log_accept, accept, Ec50_1_new, Ec50_2_new, Slope_1_new, Slope_2_new, La_1_new, La_2_new, gamma_0_new, gamma_1_new, gamma_2_new, ell_new, nu_new, alpha_new, logdet_Kxx_new, sigma2_f_new;
   arma::mat Delta_new(n1,n2), Delta_trans_new(n1,n2), p0_new(n1,n2), p_ij_new(n1,n2), B_new(n1,n2);
   arma::vec f_1_new(n1,arma::fill::ones), f_2_new(n2,arma::fill::ones), p_ij_vec_new(n3);
   List Delta_list_new;
@@ -472,7 +492,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     Slope_1_new = Slope_1 * exp(R::rnorm(0,1) * sqrt(s_Slope_1));
     
     for(int i = 1; i < n1; i ++){
-      f_1_new(i) = pow(1 + pow(10,Slope_1_new * (x1(i) - Ec50_1)),-1);
+      f_1_new(i) = La_1 + (1-La_1)*pow(1 + pow(10,Slope_1_new * (x1(i) - Ec50_1)),-1);
     }
     p0_new = f_1_new * f_2.t();
     
@@ -485,8 +505,6 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     //Computing MH ratio:
     log_accept = a_Slope_1 *(log(Slope_1_new) - log(Slope_1)) - b_Slope_1 * (Slope_1_new - Slope_1);
     log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
-    //are we here?
-    //Rcout << "Here we are! " << log_accept << std::endl;
     accept = 1;
     if( arma::is_finite(log_accept) ){
       if(log_accept < 0){
@@ -523,7 +541,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     Slope_2_new = Slope_2 * exp(R::rnorm(0,1) * sqrt(s_Slope_2));
     
     for(int j = 1; j < n2; j ++){
-      f_2_new(j) = pow(1 + pow(10,Slope_2_new * (x2(j) - Ec50_2)),-1);
+      f_2_new(j) = La_2 + (1-La_2)*pow(1 + pow(10,Slope_2_new * (x2(j) - Ec50_2)),-1);
     }
     p0_new = f_1 * f_2_new.t();
     
@@ -573,7 +591,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     Ec50_1_new = Ec50_1 + R::rnorm(0,1) * sqrt(s_Ec50_1);
     
     for(int i = 1; i < n1; i ++){
-      f_1_new(i) = pow(1 + pow(10,Slope_1 * (x1(i) - Ec50_1_new)),-1);
+      f_1_new(i) = La_1 + (1-La_1)*pow(1 + pow(10,Slope_1 * (x1(i) - Ec50_1_new)),-1);
     }
     p0_new = f_1_new * f_2.t();
     
@@ -623,7 +641,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     Ec50_2_new = Ec50_2 + R::rnorm(0,1) * sqrt(s_Ec50_2);
     
     for(int j = 1; j < n2; j ++){
-      f_2_new(j) = pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2_new)),-1);
+      f_2_new(j) = La_2 + (1-La_2)*pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2_new)),-1);
     }
     p0_new = f_1 * f_2_new.t();
     
@@ -666,6 +684,106 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         s_Ec50_2 = exp(-50);
       }
     }
+    
+    if (update_LA){
+      //La_1
+      //Propose new value
+      La_1_new = pow(1+exp(-(La_1+R::rnorm(0,1)*sqrt(s_La_1))),-1);
+      
+      for(int i = 1; i < n1; i++){
+        f_1_new(i) = La_1_new + (1-La_1_new)*pow(1 + pow(10,Slope_1 * (x1(i) - Ec50_1)),-1);
+      }
+      p0_new = f_1_new * f_2.t();
+      
+      Delta_trans_new = - p0_new % pow(1 + exp(b(0)*Delta),-1) + (1 - p0_new) % pow(1 + exp(-b(1)*Delta),-1);
+      Delta_trans_new = Delta_trans_new % id;
+      
+      p_ij_new = p0_new + Delta_trans_new;
+      p_ij_vec_new = vectorise(p_ij_new,0);
+      
+      //Computing MH ratio:
+      log_accept = a_La_1*(log(La_1_new)-log(La_1))+b_La_1*(log(1-La_1_new)-log(1-La_1));
+      log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+      
+      accept = 1;
+      if( arma::is_finite(log_accept) ){
+        if(log_accept < 0){
+          accept = exp(log_accept);
+        }
+      }else{
+        accept = 0;
+      }
+      
+      La_1_accept = La_1_accept + accept;
+      La_1_count = La_1_count+1;
+      if( R::runif(0,1) < accept ){
+        La_1 = La_1_new;
+        f_1 = f_1_new;
+        p0 = p0_new;
+        Delta_trans = Delta_trans_new;
+        p_ij = p_ij_new;
+        p_ij_vec = p_ij_vec_new;
+      }
+
+      s_La_1 = s_La_1 + pow(g+1,-wg)*(accept - opt_rate);
+      if(s_La_1 > exp(50)){
+        s_La_1 = exp(50);
+      }else{
+        if(s_La_1 < exp(-50)){
+          s_La_1 = exp(-50);
+        }
+      }
+      
+      //La_2
+      //Propose new value
+      La_2_new = pow(1+exp(-(La_2+R::rnorm(0,1)*sqrt(s_La_2))),-1);
+      for(int j = 1; j < n2; j++){
+        // f_2(j) = pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
+        f_2_new(j) = La_2_new + (1-La_2_new)*pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
+      }
+      p0_new = f_1 * f_2_new.t();
+      
+      Delta_trans_new = - p0_new % pow(1 + exp(b(0)*Delta),-1) + (1 - p0_new) % pow(1 + exp(-b(1)*Delta),-1);
+      Delta_trans_new = Delta_trans_new % id;
+      
+      p_ij_new = p0_new + Delta_trans_new;
+      p_ij_vec_new = vectorise(p_ij_new,0);
+      
+      //Computing MH ratio:
+      // Note! The prior becomes something else, due to transform
+      log_accept = a_La_2*(log(La_2_new)-log(La_2))+b_La_2*(log(1-La_2_new)-log(1-La_2));
+      log_accept = log_accept + logaccept(wy_mat, p_ij_vec, p_ij_vec_new, s2_eps, 1);
+      
+      accept = 1;
+      if( arma::is_finite(log_accept) ){
+        if(log_accept < 0){
+          accept = exp(log_accept);
+        }
+      }else{
+        accept = 0;
+      }
+      
+      La_2_accept = La_2_accept + accept;
+      La_2_count = La_2_count+1;
+      if( R::runif(0,1) < accept ){
+        La_2 = La_2_new;
+        f_2 = f_2_new;
+        p0 = p0_new;
+        Delta_trans = Delta_trans_new;
+        p_ij = p_ij_new;
+        p_ij_vec = p_ij_vec_new;
+      }
+      
+      s_La_2 = s_La_2 + pow(g+1,-wg)*(accept - opt_rate);
+      if(s_La_2 > exp(50)){
+        s_La_2 = exp(50);
+      }else{
+        if(s_La_2 < exp(-50)){
+          s_La_2 = exp(-50);
+        }
+      }
+    }
+    
     
     
     //gamma0
@@ -1125,9 +1243,10 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     
     
     //Update b
-    //Propoise new values (log-normal)
-    b_new = exp(log(b) + arma::trans(arma::chol(s_b)) * arma::randn(2,1));
-    
+    //Propose new values (log-normal)
+    b_new = exp(log(b) + arma::chol(s_b,"lower") * arma::randn(2,1));
+    // Rcout << "b_new: " << b_new.t() << "\n";
+  
     Delta_trans_new = - p0 % pow(1 + exp(b_new(0)*Delta),-1) + (1 - p0) % pow(1 + exp(-b_new(1)*Delta),-1);
     Delta_trans_new = Delta_trans_new % id;
     
@@ -1146,19 +1265,20 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     }else{
       accept = 0;
     }
-    
     b_accept = b_accept + accept;
     b_count = b_count + 1;
     
     if( R::runif(0,1) < accept ){
+      // Rcout << "accept!" <<"\n";
       b = b_new;
       Delta_trans = Delta_trans_new;
       p_ij = p_ij_new;
       p_ij_vec = p_ij_vec_new;
     }
-    
-    sum_b = sum_b + b;
-    prod_b = prod_b + b * b.t();
+    // LR 10.04.20 added logs here, since covariance estimation should happen with transformed parameters
+    sum_b = sum_b + log(b);
+    prod_b = prod_b + log(b) * log(b).t();
+
     
     s_d_b = s_d_b + pow(g+1,-wg)*(accept - opt_rate);
     if(s_d_b > exp(50)){
@@ -1170,8 +1290,9 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     }
     if(g > g0){
       s_b = s_d_b/(g-1) * (prod_b - sum_b * sum_b.t()/g) + s_d_b * eps * eye_2;
-    }
-    
+      // Rcout << "s_b:" << s_b << "\n";
+    } 
+
     //Update variances
     aux_s2eps =  -2 * logaccept(wy_mat, p_ij_vec, p_ij_vec, 1, 0);
     
@@ -1417,8 +1538,10 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       
       SLOPE_1(iter) = Slope_1;
       EC50_1(iter) = Ec50_1;
+      LA_1(iter) = La_1;
       SLOPE_2(iter) = Slope_2;
       EC50_2(iter) = Ec50_2;
+      LA_2(iter) = La_2;
       
       GAMMA_0(iter) = gamma_0;
       GAMMA_1(iter) = gamma_1;
@@ -1465,10 +1588,12 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   
   double LPML = -accu(log( CPO / n_save ));
   
-  List MCMC_Output_List, Output_List;
+  List MCMC_Output_List, Monotherapies_List, Output_List;
   
   if(type == 1){//Splines
-    MCMC_Output_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2, 
+    Monotherapies_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2,
+                                            Named("LA_1") = LA_1, Named("LA_2") = LA_2);
+    MCMC_Output_List = List::create(Named("MONO") = Monotherapies_List,
                                           Named("GAMMA_0") = GAMMA_0, Named ("GAMMA_1") = GAMMA_1, Named("GAMMA_2") = GAMMA_2,
                                                 Named("C") = C_OUT, Named("B_K1") = B_K1, Named("B_K2") = B_K2, Named("B_K3") = B_K3, Named("B1") = B1, Named("B2") = B2,
                                                       Named("S2_EC50_1") = S2_EC50_1, Named("S2_EC50_2") = S2_EC50_2, Named("S2_GAMMA_0") = S2_GAMMA_0, Named("S2_GAMMA_1") = S2_GAMMA_1, Named("S2_GAMMA_2") = S2_GAMMA_2,
@@ -1476,15 +1601,19 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   }
   
   if(type == 2){//Double exponential
-    MCMC_Output_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2, 
-                                          Named("GAMMA_0") = GAMMA_0, Named ("GAMMA_1") = GAMMA_1, Named("GAMMA_2") = GAMMA_2,
-                                                Named("B") = B_OUT, Named("ELL") = ELL, Named("SIGMA2_F") = SIGMA2_F, Named("B1") = B1, Named("B2") = B2,
+    Monotherapies_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2,
+                                            Named("LA_1") = LA_1, Named("LA_2") = LA_2);
+    MCMC_Output_List = List::create(Named("MONO") = Monotherapies_List,
+                                            Named("GAMMA_0") = GAMMA_0, Named ("GAMMA_1") = GAMMA_1, Named("GAMMA_2") = GAMMA_2,
+                                                     Named("B") = B_OUT, Named("ELL") = ELL, Named("SIGMA2_F") = SIGMA2_F, Named("B1") = B1, Named("B2") = B2,
                                                       Named("S2_EC50_1") = S2_EC50_1, Named("S2_EC50_2") = S2_EC50_2, Named("S2_GAMMA_0") = S2_GAMMA_0, Named("S2_GAMMA_1") = S2_GAMMA_1, Named("S2_GAMMA_2") = S2_GAMMA_2,
                                                             Named("S2_EPS") = S2_EPS, Named("LPML") = LPML);
   }
   
   if(type == 3){//Matern
-    MCMC_Output_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2, 
+    Monotherapies_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2,
+                                            Named("LA_1") = LA_1, Named("LA_2") = LA_2);
+    MCMC_Output_List = List::create(Named("MONO") = Monotherapies_List,
                                           Named("GAMMA_0") = GAMMA_0, Named ("GAMMA_1") = GAMMA_1, Named("GAMMA_2") = GAMMA_2,
                                                 Named("B") = B_OUT, Named("ELL") = ELL, Named("NU") = NU, Named("SIGMA2_F") = SIGMA2_F, Named("B1") = B1, Named("B2") = B2,
                                                 Named("S2_EC50_1") = S2_EC50_1, Named("S2_EC50_2") = S2_EC50_2, Named("S2_GAMMA_0") = S2_GAMMA_0, Named("S2_GAMMA_1") = S2_GAMMA_1, Named("S2_GAMMA_2") = S2_GAMMA_2,
@@ -1492,7 +1621,9 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   }
   
   if(type == 4){//Rational quadratic
-    MCMC_Output_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2, 
+    Monotherapies_List = List::create(Named("SLOPE_1") = SLOPE_1, Named("EC50_1") = EC50_1, Named("SLOPE_2") = SLOPE_2, Named("EC50_2") = EC50_2,
+                                            Named("LA_1") = LA_1, Named("LA_2") = LA_2);
+    MCMC_Output_List = List::create(Named("MONO") = Monotherapies_List,
                                           Named("GAMMA_0") = GAMMA_0, Named ("GAMMA_1") = GAMMA_1, Named("GAMMA_2") = GAMMA_2,
                                                 Named("B") = B_OUT, Named("ELL") = ELL, Named("ALPHA") = ALPHA, Named("SIGMA2_F") = SIGMA2_F, Named("B1") = B1, Named("B2") = B2,
                                                       Named("S2_EC50_1") = S2_EC50_1, Named("S2_EC50_2") = S2_EC50_2, Named("S2_GAMMA_0") = S2_GAMMA_0, Named("S2_GAMMA_1") = S2_GAMMA_1, Named("S2_GAMMA_2") = S2_GAMMA_2,
@@ -1505,6 +1636,10 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   Rcout << "Ec50_2 acc. rate = " << Ec50_2_accept/Ec50_2_count << "\n";
   Rcout << "Slope_1 acc. rate = " << Slope_1_accept/Slope_1_count << "\n";
   Rcout << "Slope_2 acc. rate = " << Slope_2_accept/Slope_2_count << "\n";
+  if(update_LA){
+    Rcout << "La_1 acc. rate = " << La_1_accept/La_1_count << "\n";
+    Rcout << "La_2 acc. rate = " << La_2_accept/La_2_count << "\n";
+  }
   Rcout << "gamma_0 acc. rate = " << gamma_0_accept/gamma_0_count << "\n";
   Rcout << "gamma_1 acc. rate = " << gamma_1_accept/gamma_1_count << "\n";
   Rcout << "gamma_2 acc. rate = " << gamma_2_accept/gamma_2_count << "\n";

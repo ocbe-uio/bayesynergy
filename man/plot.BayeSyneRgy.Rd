@@ -5,7 +5,7 @@
 \title{Plot function for a BayeSyneRgy object}
 \usage{
 \method{plot}{BayeSyneRgy}(x, add_contour = TRUE, contour_levels = 0.5,
-  plot_type = "2D", save_plot = FALSE, ...)
+  plot_type = "2D", save_plot = FALSE, path = NULL, ...)
 }
 \arguments{
 \item{x}{BayeSyn object, the result of \code{\link{BayeSyneRgy}}.}
@@ -17,6 +17,8 @@
 \item{plot_type}{which plots to display. Either "2D" for two-dimensional contour plots, "3D" for interactive three-dimensional plots of the surfaces, or "both" for both these options.}
 
 \item{save_plot}{logical; if TRUE, plots are saved locally}
+
+\item{path}{string; path for saving plots, if NULL default is work directory}
 
 \item{...}{further arguments passed to or from other methods.}
 }

@@ -32,7 +32,11 @@ summary.BayeSyneRgy <- function(object,...){
                         sapply(Summary_Output, quantile, probs = 0.975),
                         sapply(Summary_Output, function(x,n){effectiveSize(as.mcmc(x))/n}, n = n_save)))
   colnames(summary_out) <- c("mean", "sd", paste(2.5, "%"), paste(50, "%"), paste(97.5, "%"), "ESS/N")
-  print(summary_out,digits=2)
+  if (!object$lower_asymptote){
+    print(summary_out[-c(5,6),],digits=3)
+  } else{
+    print(summary_out,digits=3)
+  }
   
   cat("\n")
   cat("log-Pseudo Marginal Likelihood (LPML) = ", LPML, "\n")
