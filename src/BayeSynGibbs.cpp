@@ -90,7 +90,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   double La_1 = 0.5;
   double La_1_accept = 0;
   double La_1_count = 0;
-  double s_La_1 = 0.01;
+  double s_La_1 = 10;
   double a_La_1 = Hyper_param["a_La_1"];
   double b_La_1 = Hyper_param["b_La_1"];
   
@@ -116,7 +116,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
   double La_2 = 0.5;
   double La_2_accept = 0;
   double La_2_count = 0;
-  double s_La_2 = 0.01;
+  double s_La_2 = 10;
   double a_La_2 = Hyper_param["a_La_2"];
   double b_La_2 = Hyper_param["b_La_2"];
   
@@ -689,7 +689,6 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       //La_1
       //Propose new value
       La_1_new = pow(1+exp(-(La_1+R::rnorm(0,1)*sqrt(s_La_1))),-1);
-      
       for(int i = 1; i < n1; i++){
         f_1_new(i) = La_1_new + (1-La_1_new)*pow(1 + pow(10,Slope_1 * (x1(i) - Ec50_1)),-1);
       }
@@ -724,7 +723,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         p_ij = p_ij_new;
         p_ij_vec = p_ij_vec_new;
       }
-
+  
       s_La_1 = s_La_1 + pow(g+1,-wg)*(accept - opt_rate);
       if(s_La_1 > exp(50)){
         s_La_1 = exp(50);
@@ -737,6 +736,8 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
       //La_2
       //Propose new value
       La_2_new = pow(1+exp(-(La_2+R::rnorm(0,1)*sqrt(s_La_2))),-1);
+      
+      
       for(int j = 1; j < n2; j++){
         // f_2(j) = pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
         f_2_new(j) = La_2_new + (1-La_2_new)*pow(1 + pow(10,Slope_2 * (x2(j) - Ec50_2)),-1);
@@ -773,7 +774,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
         p_ij = p_ij_new;
         p_ij_vec = p_ij_vec_new;
       }
-      
+     
       s_La_2 = s_La_2 + pow(g+1,-wg)*(accept - opt_rate);
       if(s_La_2 > exp(50)){
         s_La_2 = exp(50);
@@ -1245,7 +1246,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     //Update b
     //Propose new values (log-normal)
     b_new = exp(log(b) + arma::chol(s_b,"lower") * arma::randn(2,1));
-    // Rcout << "b_new: " << b_new.t() << "\n";
+   
   
     Delta_trans_new = - p0 % pow(1 + exp(b_new(0)*Delta),-1) + (1 - p0) % pow(1 + exp(-b_new(1)*Delta),-1);
     Delta_trans_new = Delta_trans_new % id;
@@ -1269,7 +1270,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     b_count = b_count + 1;
     
     if( R::runif(0,1) < accept ){
-      // Rcout << "accept!" <<"\n";
+    
       b = b_new;
       Delta_trans = Delta_trans_new;
       p_ij = p_ij_new;
@@ -1290,7 +1291,7 @@ List BayeSynGibbs(arma::mat y_mat, arma::mat x_mat, List model_spec, List Alg_pa
     }
     if(g > g0){
       s_b = s_d_b/(g-1) * (prod_b - sum_b * sum_b.t()/g) + s_d_b * eps * eye_2;
-      // Rcout << "s_b:" << s_b << "\n";
+     
     } 
 
     //Update variances
