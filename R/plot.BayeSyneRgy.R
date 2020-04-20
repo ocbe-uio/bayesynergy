@@ -198,7 +198,7 @@ plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_t
     #DSS first and second drugs
     hist(DSS_1, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[1], sep = ""), cex.axis = 1.5)
     hist(DSS_2, col = "lightblue", probability = TRUE, breaks = 30, xlab = "DSS", ylab = "", main = paste("DSS for ", drug_names[2], sep = ""), cex.axis = 1.5)
-    mtext(paste0(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2]),side=1,outer=T,line=-2,cex=1.5)
+    mtext(paste(experiment_ID,"-",drug_names_forplot[1], "&", drug_names_forplot[2]),side=1,outer=T,line=-2,cex=1.5)
     if(save_plot){
       dev.off()
     }else{
