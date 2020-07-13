@@ -4,8 +4,15 @@
 \alias{plot.BayeSyneRgy}
 \title{Plot function for a BayeSyneRgy object}
 \usage{
-\method{plot}{BayeSyneRgy}(x, add_contour = TRUE, contour_levels = 0.5,
-  plot_type = "2D", save_plot = FALSE, path = NULL, ...)
+\method{plot}{BayeSyneRgy}(
+  x,
+  add_contour = TRUE,
+  contour_levels = 0.5,
+  plot_type = "2D",
+  save_plot = FALSE,
+  path = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{BayeSyn object, the result of \code{\link{BayeSyneRgy}}.}

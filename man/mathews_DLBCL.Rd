@@ -4,7 +4,9 @@
 \name{mathews_DLBCL}
 \alias{mathews_DLBCL}
 \title{A drug combination dataset}
-\format{A list containing two distinct dataset from the experiment. Each list element is itself a list of two elemnts: a matrix of viability scores, and a matrix of corresponding concentrations. The data was adapted from the data provided by the \code{synergyfinder} R package.}
+\format{
+A list containing two distinct dataset from the experiment. Each list element is itself a list of two elemnts: a matrix of viability scores, and a matrix of corresponding concentrations. The data was adapted from the data provided by the \code{synergyfinder} R package.
+}
 \usage{
 data("mathews_DLBCL")
 }

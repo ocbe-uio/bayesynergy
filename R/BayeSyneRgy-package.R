@@ -1,9 +1,10 @@
 #' BayeSyneRgy
 #' 
-#' 
-#' @docType package
-#' @importFrom Rcpp sourceCpp
-#' @useDynLib BayeSyneRgy
 #' @name BayeSyneRgy
+#' @docType package
+#' @import Rcpp
+#' @import methods
+#' @importFrom rstan sampling
+#' @useDynLib BayeSyneRgy, .registration = TRUE
 #' 
 NULL

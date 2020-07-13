@@ -7,9 +7,35 @@ Author: Andrea Cremaschi, Leiv Rønneberg, Manuela Zucknick
 Maintainer: Andrea Cremaschi <andrea.cremaschi@medisin.uio.no>, Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
 Description: The package implements a spline or Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between spline or GP model, the latter available with different kernels for the definition of the covariance structure.
 License: GPL (>= 2)
-Imports: Rcpp (>= 1.0.1), mvnfast, mvtnorm, viridis, caTools, graphics, grDevices, rgl, plot3D, coda, stringr
-Depends: R (>= 3.0.0)
+Imports: 
+    caTools,
+    coda,
+    graphics,
+    grDevices,
+    methods,
+    mvnfast,
+    mvtnorm,
+    plot3D,
+    Rcpp (>= 1.0.1),
+    RcppParallel (>= 5.0.1),
+    rgl,
+    rstan (>= 2.18.1),
+    rstantools (>= 2.1.1),
+    stringr,
+    viridis
+Depends: 
+    R (>= 3.4.0)
 Suggests: synergyfinder
-LinkingTo: Rcpp, RcppArmadillo, BH, RcppProgress
+LinkingTo: 
+    BH (>= 1.66.0),
+    Rcpp (>= 0.12.0), %>% 
+    RcppArmadillo,
+    RcppEigen (>= 0.3.3.3.0),
+    RcppParallel (>= 5.0.1),
+    RcppProgress,
+    rstan (>= 2.18.1),
+    StanHeaders (>= 2.18.0)
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
+Biarch: true
+SystemRequirements: GNU make

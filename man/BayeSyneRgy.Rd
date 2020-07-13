@@ -3,13 +3,22 @@
 \docType{package}
 \name{BayeSyneRgy}
 \alias{BayeSyneRgy}
-\alias{BayeSyneRgy-package}
 \title{BayeSyneRgy}
 \usage{
-BayeSyneRgy(y_mat, x_mat, drug_names = NULL, experiment_ID = NULL,
-  log10_conc = FALSE, lower_asymptote = T, type = 2,
-  Alg_param = list(), Hyper_param = list(), GP_param = list(),
-  var_prior = 1, ...)
+BayeSyneRgy(
+  y_mat,
+  x_mat,
+  drug_names = NULL,
+  experiment_ID = NULL,
+  log10_conc = FALSE,
+  lower_asymptote = T,
+  type = 2,
+  Alg_param = list(),
+  Hyper_param = list(),
+  GP_param = list(),
+  var_prior = 1,
+  ...
+)
 }
 \arguments{
 \item{y_mat}{A matrix of responses, measured as share of viable cells after treatment. 
