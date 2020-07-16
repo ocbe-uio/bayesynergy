@@ -1,8 +1,8 @@
-#' Plot function for a BayeSyneRgy object
+#' Plot function for a gibbs_BayeSyneRgy object
 #' 
-#' @description A function for plotting synergy surfaces and summary statistics of a \code{BayeSyneRgy} object.
+#' @description A function for plotting synergy surfaces and summary statistics of a \code{gibbs_BayeSyneRgy} object.
 #' 
-#' @param x BayeSyn object, the result of \code{\link{BayeSyneRgy}}.
+#' @param x gibbs_BayeSyn object, the result of \code{\link{gibbs_BayeSyneRgy}}.
 #' @param add_contour logical; if TRUE, draws contour lines at specified levels
 #' @param contour_levels the contour levels
 #' @param plot_type which plots to display. Either "2D" for two-dimensional contour plots, "3D" for interactive three-dimensional plots of the surfaces, or "both" for both these options.
@@ -24,7 +24,7 @@
 #' @export 
 
 
-plot.BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_type = "2D", save_plot = FALSE, path=NULL, ...){
+plot.gibbs_BayeSyneRgy <- function(x, add_contour = TRUE, contour_levels = 0.5, plot_type = "2D", save_plot = FALSE, path=NULL, ...){
   
   # Removed attach here, so need to declare some variables properly
   type <- x$type

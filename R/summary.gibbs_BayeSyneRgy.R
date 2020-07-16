@@ -17,7 +17,7 @@
 #' 
 #' @export
 
-summary.BayeSyneRgy <- function(object,...){
+summary.gibbs_BayeSyneRgy <- function(object,...){
   
   Summary_Output <- object$Summary_Output
   
