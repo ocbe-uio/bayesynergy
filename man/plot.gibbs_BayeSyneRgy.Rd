@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.gibbs_BayeSyneRgy.R
 \name{plot.gibbs_BayeSyneRgy}
 \alias{plot.gibbs_BayeSyneRgy}
-\title{Plot function for a BayeSyneRgy object}
+\title{Plot function for a gibbs_BayeSyneRgy object}
 \usage{
 \method{plot}{gibbs_BayeSyneRgy}(
   x,
@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{x}{BayeSyn object, the result of \code{\link{BayeSyneRgy}}.}
+\item{x}{gibbs_BayeSyn object, the result of \code{\link{gibbs_BayeSyneRgy}}.}
 
 \item{add_contour}{logical; if TRUE, draws contour lines at specified levels}
 
@@ -30,7 +30,7 @@
 \item{...}{further arguments passed to or from other methods.}
 }
 \description{
-A function for plotting synergy surfaces and summary statistics of a \code{BayeSyneRgy} object.
+A function for plotting synergy surfaces and summary statistics of a \code{gibbs_BayeSyneRgy} object.
 }
 \details{
 This function extends \code{plot} to draw response and interaction surfaces of the fitted model. Both three-dimensional interactive plots, and two-dimensional contour plots can be displayed.
