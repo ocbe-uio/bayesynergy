@@ -63,11 +63,18 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_stan_fit4gp_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4gp_grid_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4splines_mod();
+
 static const R_CallMethodDef CallEntries[] = {
     {"_BayeSyneRgy_BayeSynGibbs", (DL_FUNC) &_BayeSyneRgy_BayeSynGibbs, 5},
     {"_BayeSyneRgy_GPKernel", (DL_FUNC) &_BayeSyneRgy_GPKernel, 2},
     {"_BayeSyneRgy_computeDelta", (DL_FUNC) &_BayeSyneRgy_computeDelta, 3},
     {"_BayeSyneRgy_logaccept", (DL_FUNC) &_BayeSyneRgy_logaccept, 5},
+    {"_rcpp_module_boot_stan_fit4gp_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4gp_mod, 0},
+    {"_rcpp_module_boot_stan_fit4gp_grid_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4gp_grid_mod, 0},
+    {"_rcpp_module_boot_stan_fit4splines_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4splines_mod, 0},
     {NULL, NULL, 0}
 };
 

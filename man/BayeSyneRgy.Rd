@@ -5,16 +5,50 @@
 \title{Bayesian semi-parametric modelling for in-vitro drug combination experiments}
 \usage{
 bayesynergy(
-  y_mat,
-  x_mat,
+  y,
+  x,
+  type = 3,
   drug_names = NULL,
   experiment_ID = NULL,
   log10_conc = FALSE,
-  lower_asymptote = T,
-  type = 2,
+  lower_asymptotes = T,
+  nu = 1.5,
+  method = "sampling",
+  control = list(),
   ...
 )
 }
+\arguments{
+\item{y}{vector or matrix of viability measures.}
+
+\item{x}{two-column matrix of drug concentrations.}
+
+\item{type}{integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).}
+
+\item{drug_names}{vector of size 2; names of the drugs utilized for the experiment.}
+
+\item{experiment_ID}{character; identifier of experiment, typically name of cell Line.}
+
+\item{log10_conc}{logical; if TRUE concentrations are assumed given on the log10 scale.}
+
+\item{lower_asymptotes}{logical; if TRUE the model will estimate lower estimate of monotherapy curves.}
+
+\item{nu}{numeric; the nu parameter for the Matern kernel. Must be one of {`0.5`,`1.5`,`2.5`}}
+
+\item{method}{The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.}
+
+\item{control}{list; passed on to the stan sampler, e.g. for setting adapt_delta.}
+
+\item{...}{Arguments passed to `rstan::sampling` (e.g. iter, chains).}
+}
 \description{
 The function \code{bayesynergy} is the main function of the BayeSyneRgy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects.
+}
+\examples{
+library(BayeSyneRgy)
+data("mathews_DLBCL")
+y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
+x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
+fit <- bayesynergy(y_mat,x_mat)
+
 }

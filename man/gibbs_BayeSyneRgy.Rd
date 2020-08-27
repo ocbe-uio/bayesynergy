@@ -114,7 +114,7 @@ library(BayeSyneRgy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
-fit <- BayeSyneRgy(y_mat,x_mat)
+fit <- gibbs_BayeSyneRgy(y_mat,x_mat)
 
 
 }

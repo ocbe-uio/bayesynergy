@@ -3,7 +3,7 @@
 #' @description 
 #' A function summarizing posterior inference of a \code{BayeSyneRgy} object.
 #' 
-#' @param object The fitted model to summarise, from \code{\link{BayeSyneRgy}}.
+#' @param object The fitted model to summarise, from \code{\link{gibbs_BayeSyneRgy}}.
 #' @param ... further arguments passed to or from other methods.
 #' 
 #' @examples
@@ -11,7 +11,7 @@
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
-#' fit <- BayeSyneRgy(y_mat,x_mat)
+#' fit <- gibbs_BayeSyneRgy(y_mat,x_mat)
 #' summary(fit)
 #' 
 #' 

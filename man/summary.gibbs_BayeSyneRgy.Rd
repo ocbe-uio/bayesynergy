@@ -7,7 +7,7 @@
 \method{summary}{gibbs_BayeSyneRgy}(object, ...)
 }
 \arguments{
-\item{object}{The fitted model to summarise, from \code{\link{BayeSyneRgy}}.}
+\item{object}{The fitted model to summarise, from \code{\link{gibbs_BayeSyneRgy}}.}
 
 \item{...}{further arguments passed to or from other methods.}
 }
@@ -19,7 +19,7 @@ library(BayeSyneRgy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
-fit <- BayeSyneRgy(y_mat,x_mat)
+fit <- gibbs_BayeSyneRgy(y_mat,x_mat)
 summary(fit)
 
 
