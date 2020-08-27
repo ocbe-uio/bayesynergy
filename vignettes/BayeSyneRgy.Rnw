@@ -1,7 +1,0 @@
-\documentclass{article}
-\usepackage{pdfpages}
-%\VignetteIndexEntry{BayeSyneRgy}
-
-\begin{document}
-\includepdf[pages=-, fitpaper=true]{vignette.pdf}
-\end{document}
