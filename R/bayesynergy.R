@@ -87,7 +87,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   X2 = c(0,10^unqX2)
   Xgrid = expand.grid(X1,X2)
   Xgrid = Xgrid[order(Xgrid["Var1"],Xgrid["Var2"]),]
-  ii_obs = match(data.frame(t(x)),data.frame(t(Xgrid)))
+  ii_obs = match(data.frame(t(round(x,digits=15))),data.frame(t(round(Xgrid,digits=15))))
   
   
   # If replicates are given in matrix form, needs to be handled by replicating coordinates.

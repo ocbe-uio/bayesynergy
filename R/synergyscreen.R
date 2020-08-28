@@ -7,17 +7,13 @@
 #'    
 #' @param experiments A list of experiments obtained from a high-throughput screen. See *Details* for more information on the structure of each element
 #' @param metric The metric returned to the user. Must be a named variable from the \code{Summary_Ouput} of the S3 BayeSyneRgy object.
-#' @param save_raw logical; if TRUE, the raw bayesynergy object is saved for each individual experiment
-#' @param save_plots  logical; if TRUE, plots for each individual experiment is saved
+#' @param save_raw logical; if TRUE, the raw bayesynergy object is saved for each individual experiment.
+#' @param save_plots  logical; if TRUE, plots for each individual experiment is saved.
 #' @param path string; path for saving output and plot for each individual experiment.
-#' @param parallel logical; if TRUE, parallel processing is utilized to run the screen
-#' @param max_cores integer; the maximum number of cores to utilize for the parallel processing
-#' @param type integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).
-#' @param lower_asymptotes logical; if TRUE the model will estimate lower estimate of monotherapy curves.
-#' @param nu numeric; the nu parameter for the Matern kernel. Must be one of {`0.5`,`1.5`,`2.5`}
-#' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
-#' @param control list; passed on to the stan sampler, e.g. for setting adapt_delta.
-#' @param ... Arguments passed to `rstan::sampling` (e.g. iter, chains).  
+#' @param parallel logical; if TRUE, parallel processing is utilized to run the screen.
+#' @param max_cores integer; the maximum number of cores to utilize for the parallel processing.
+#' @param plot_params list; parameters to be passed to the plotting function. See \link{plot.bayesynergy} for details.
+#' @param bayesynergy_params list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.
 #'  
 #' 
 #' @details
@@ -45,8 +41,7 @@
 #' @import foreach doParallel parallel doSNOW
 
 synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_raw = T, save_plots = T, path = NULL, parallel=T, max_cores=NULL,
-                         type = 3, lower_asymptotes = T, nu = 1.5 , method = "sampling",
-                         control = list(), ...){
+                         plot_params = list(), bayesynergy_params = list()){
   # Check that path is not null, and if so, set it to work directory
   if (is.null(path)){
     path <- getwd()
@@ -80,17 +75,14 @@ synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_ra
                        .packages = "BayeSyneRgy") %dopar% {
                          # Do the fitting here
                          data <- ee
-                         fit <- bayesynergy(data$y,data$x,drug_names = data$drug_names,
-                                            experiment_ID = data$experiment_ID,type = type,
-                                            lower_asymptotes = lower_asymptotes, nu = nu,
-                                            method=method, control = control, ...)
+                         fit <- do.call(bayesynergy,c(data,bayesynergy_params))
                          # Saving raw
                          if (save_raw){
                            save(fit,file=paste0(path,paste(data$experiment_ID,data$drug_names[1],data$drug_names[2],"raw",sep="_")))
                          }
                          # Saving plots
                          if (save_plots){
-                           suppressMessages(plot(fit,save_plot = T,path=path))
+                           suppressMessages(do.call(plot,c(list(fit,save_plot = T, path=path), plot_params)))
                          }
                          
                          # Posterior 
@@ -114,15 +106,14 @@ synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_ra
   } else { # Simple for loop
     for (i in 1:length(experiments)){
       data <- experiments[[i]]
-      fit <- bayesynergy(data$y,data$x,drug_names = data$drug_names,
-                         experiment_ID = data$experiment_ID)
+      fit <- do.call(bayesynergy,c(data,bayesynergy_params))
       # Saving raw
       if (save_raw){
         save(fit,file=paste0(path,paste(data$experiment_ID,data$drug_names[1],data$drug_names[2],"raw",sep="_")))
       }
       # Saving plots
       if (save_plots){
-        suppressMessages(plot(fit,save_plot = T,path=path))
+        suppressMessages(do.call(plot,c(fit,save_plot = T, path=path, plot_params)))
       }
       
       # Posterior 
