@@ -42,6 +42,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   }
   if (type == 2 & !(nu %in% c(0.5,1.5,2.5))){
     stop("Argument 'nu' must be one of {1/2,3/2,5/2}!")
+    
   }
   
   # Checking that data input is valid
