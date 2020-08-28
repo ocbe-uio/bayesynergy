@@ -45,7 +45,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   }
   
   # Checking that data input is valid
-  if (!is.matrix(x)){
+  if (!is.numeric(x)){
     stop("Argument 'x' should be a two-column matrix of drug concentrations")
   }
   if (nrow(as.matrix(y))!=nrow(x)){
