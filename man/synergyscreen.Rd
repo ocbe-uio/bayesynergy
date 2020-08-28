@@ -11,7 +11,13 @@ synergyscreen(
   save_plots = T,
   path = NULL,
   parallel = T,
-  max_cores = NULL
+  max_cores = NULL,
+  type = 3,
+  lower_asymptotes = T,
+  nu = 1.5,
+  method = "sampling",
+  control = list(),
+  ...
 )
 }
 \arguments{
@@ -28,6 +34,18 @@ synergyscreen(
 \item{parallel}{logical; if TRUE, parallel processing is utilized to run the screen}
 
 \item{max_cores}{integer; the maximum number of cores to utilize for the parallel processing}
+
+\item{type}{integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).}
+
+\item{lower_asymptotes}{logical; if TRUE the model will estimate lower estimate of monotherapy curves.}
+
+\item{nu}{numeric; the nu parameter for the Matern kernel. Must be one of {`0.5`,`1.5`,`2.5`}}
+
+\item{method}{The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.}
+
+\item{control}{list; passed on to the stan sampler, e.g. for setting adapt_delta.}
+
+\item{...}{Arguments passed to `rstan::sampling` (e.g. iter, chains).}
 }
 \description{
 The function \code{synergyscreen} allows the fitting of high-throughput drug combination screens through parallel processing
