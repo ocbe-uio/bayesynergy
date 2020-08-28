@@ -92,9 +92,13 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   nrep = ncol(y)
   if (nrep > 1){
     ii_obs = rep(ii_obs,nrep) # Replicating 
+    ii_obs = ii_obs[which(!is.na(y))] # Removing those that are missing
+    nmissing = length(rep(1:nrow(Xgrid),nrep))-length(ii_obs) # How many missing?
+  } else {
+    nrep = max(table(ii_obs))
+    nmissing = (length(unqX1)+length(unqX2)+length(unqX1)*length(unqX2)+1)*nrep-length(y)
   }
-  ii_obs = ii_obs[which(!is.na(y))] # Removing those that are missing
-  nmissing = length(rep(1:nrow(Xgrid),nrep))-length(ii_obs) # How many missing?
+  
   y = as.vector(y)
   y = y[which(!is.na(y))] # Removing missing
   
