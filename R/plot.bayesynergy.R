@@ -169,7 +169,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
     geom_point(data = mono1, mapping = aes(x,y), na.rm = T) +
     ylim(min(-0.5,min(mono1$y)),max(1.5,max(mono1$y))) +
-    labs(x = bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[1]])~")"), y = "% Viability",
+    labs(x = bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")"), y = "% Viability",
          title = "Monotherapy drug 1",
          subtitle = paste0(x$data$experiment_ID,": ", x$data$drug_names[1]))+
     scale_x_continuous(labels = math_format(10^.x))
@@ -179,7 +179,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
     geom_point(data = mono2, mapping = aes(x,y), na.rm = T) +
     ylim(min(-0.5,min(mono2$y)),max(1.5,max(mono2$y))) +
-    labs(x = bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[2]])~")"), y = "% Viability",
+    labs(x = bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")"), y = "% Viability",
          title = "Monotherapy drug 2",
          subtitle = paste0(x$data$experiment_ID,": ", x$data$drug_names[2]))+
     scale_x_continuous(labels = math_format(10^.x))
@@ -213,8 +213,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                       name="% Viability", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[1]])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[2]])~")")) +
+    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
     labs(title = "Response surface",
         subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2]))
     
@@ -227,8 +227,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                       name="% Viability", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[1]])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[2]])~")")) +
+    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
     labs(title = "Non-interaction surface",
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2]))
   
@@ -253,8 +253,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                       name="Interaction %", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[1]])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(parse(text=x$data$drug_names)[[2]])~")")) +
+    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
     labs(title = "Interaction surface",
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2])) +
     guides(fill=guide_legend(ncol=1))
