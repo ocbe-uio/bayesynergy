@@ -26,6 +26,7 @@
 #' @importFrom plotly plot_ly add_surface add_trace %>% plotly_build
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
+#' @importFrom inlmisc GetColors
 #' 
 #' @export 
 
@@ -127,7 +128,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     z_Delta = x$posterior_mean$Delta[-1,-1]
     fig = plot_ly()
     fig = fig %>% add_trace(x = unqX1, y = unqX2, z = z_Delta,type = "surface",
-                            colorscale = list(c(0,0.5, 1), c("green","yellow", "red")),cmin=-1,cmax=1)
+                            colorscale = list(c(0,0.5, 1), c("2166AC","EAECCC", "B2182B")),cmin=-1,cmax=1)
     fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(-1,1),
                                                   title="Interaction"),
                                       xaxis = list(title=x$data$drug_names[1]),
@@ -234,7 +235,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   
   
   #Interaction surface has a different color scale
-  Delta_col_palette <- colorRampPalette(c("green", "yellow", "red"))
+  Delta_col_palette <- inlmisc::GetColors(scheme = "sunset")
   # Breaks
   eps = 0.05
   breaks = c(seq(-1,-0.1,by=0.1),0-eps,0+eps,seq(0.1,1,by=0.1))
@@ -258,7 +259,6 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     labs(title = "Interaction surface",
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2])) +
     guides(fill=guide_legend(ncol=1))
-  
   
   ####################################################################################
   # Summary statistics
