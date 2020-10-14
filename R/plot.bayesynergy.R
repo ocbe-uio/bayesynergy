@@ -14,7 +14,7 @@
 #' 
 #' 
 #' @examples 
-#' library(BayeSyneRgy)
+#' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
@@ -43,6 +43,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   }
   # Put dirmark on file path
   path = Sys.glob(path,dirmark = T)
+
   
   #Close all graphic tools open
   # graphics.off()

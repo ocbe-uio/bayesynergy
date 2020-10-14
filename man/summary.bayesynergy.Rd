@@ -15,7 +15,7 @@
 A function summarizing posterior inference of a \code{bayesynergy} object.
 }
 \examples{
-library(BayeSyneRgy)
+library(bayesynergy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]

@@ -16,7 +16,7 @@
 #' @param ... Arguments passed to `rstan::sampling` (e.g. iter, chains).
 #' 
 #' @examples 
-#' library(BayeSyneRgy)
+#' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]

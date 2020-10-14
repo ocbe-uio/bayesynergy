@@ -48,11 +48,13 @@ experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line nam
 }
 }
 \examples{
-library(BayeSyneRgy)
+\dontrun{
+library(bayesynergy)
 data("mathews_DLBCL")
 experiment1 = list(y = mathews_DLBCL[[1]][[1]], x = mathews_DLBCL[[1]][[2]], drug_names = c("ispinesib","ibrutinib"),experiment_ID = "experiment1")
 experiment2 = list(y = mathews_DLBCL[[2]][[1]], x = mathews_DLBCL[[2]][[2]], drug_names = c("canertinib","ibrutinib"),experiment_ID = "experiment2")
 experiments = list(experiment1,experiment2)
 fit <- synergyscreen(experiments)
+}
 
 }

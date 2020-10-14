@@ -1031,7 +1031,7 @@ public:
                         add(pij_0, Delta_ij), 
                         "assigning variable f");
             current_statement_begin__ = 157;
-            lp_accum__.add(inv_gamma_log<propto__>(s2, 3, 2));
+            lp_accum__.add(inv_gamma_log<propto__>(s2, 3, 0.5));
             current_statement_begin__ = 158;
             lp_accum__.add(inv_gamma_log<propto__>(s2_ec50_1, 3, 2));
             current_statement_begin__ = 159;
@@ -1059,9 +1059,9 @@ public:
             current_statement_begin__ = 174;
             lp_accum__.add(gamma_log<propto__>(b2, 1, 1));
             current_statement_begin__ = 177;
-            lp_accum__.add(gamma_log<propto__>(ell, 1, 1));
+            lp_accum__.add(inv_gamma_log<propto__>(ell, 5, 5));
             current_statement_begin__ = 178;
-            lp_accum__.add(lognormal_log<propto__>(sigma_f, 1, 1));
+            lp_accum__.add(lognormal_log<propto__>(sigma_f, 0, 1));
             current_statement_begin__ = 179;
             if (as_bool(est_alpha)) {
                 current_statement_begin__ = 180;

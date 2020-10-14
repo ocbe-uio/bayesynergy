@@ -7,7 +7,7 @@
 #' @param ... further arguments passed to or from other methods.
 #' 
 #' @examples 
-#' library(BayeSyneRgy)
+#' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]

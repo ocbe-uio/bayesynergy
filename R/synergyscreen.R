@@ -29,12 +29,14 @@
 #' 
 #'
 #' @examples
-#' library(BayeSyneRgy)
+#' \dontrun{
+#' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' experiment1 = list(y = mathews_DLBCL[[1]][[1]], x = mathews_DLBCL[[1]][[2]], drug_names = c("ispinesib","ibrutinib"),experiment_ID = "experiment1")
 #' experiment2 = list(y = mathews_DLBCL[[2]][[1]], x = mathews_DLBCL[[2]][[2]], drug_names = c("canertinib","ibrutinib"),experiment_ID = "experiment2")
 #' experiments = list(experiment1,experiment2)
 #' fit <- synergyscreen(experiments)
+#' }
 #'
 #' @export
 #'
@@ -62,6 +64,7 @@ synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_ra
       max_cores <- min(length(experiments),min(max_cores, parallel::detectCores() - 1))
     }
     print(paste("Using",max_cores,"cores for parallel run on list of size",length(experiments)))
+    print(paste("Saving output at:",path))
     cl = parallel::makeCluster(max_cores,setup_strategy = "sequential")
     registerDoSNOW(cl)
     # Setting up progress bar
@@ -70,9 +73,10 @@ synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_ra
     opts <- list(progress = progress)
     # Running the experiments, in parallel
     results = foreach (ee=experiments, .combine=list,
+                       .maxcombine = length(experiments),
                        .multicombine = T,
                        .options.snow = opts,
-                       .packages = "BayeSyneRgy") %dopar% {
+                       .packages = "bayesynergy") %dopar% {
                          # Do the fitting here
                          data <- ee
                          fit <- do.call(bayesynergy,c(data,bayesynergy_params))
@@ -82,7 +86,7 @@ synergyscreen = function(experiments, metric = c("rVUS_syn","rVUS_ant"), save_ra
                          }
                          # Saving plots
                          if (save_plots){
-                           suppressMessages(do.call(plot,c(list(fit,save_plot = T, path=path), plot_params)))
+                           suppressMessages(do.call(plot,c(list(x=fit,save_plot = T, path=path), plot_params)))
                          }
                          
                          # Posterior 

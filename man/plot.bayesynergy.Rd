@@ -26,7 +26,7 @@ A function for plotting synergy surfaces and summary statistics of a \code{bayes
 This function extends \code{plot} to draw response and interaction surfaces of the fitted model. Both three-dimensional interactive plots, and two-dimensional contour plots can be displayed.
 }
 \examples{
-library(BayeSyneRgy)
+library(bayesynergy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]

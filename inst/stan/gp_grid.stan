@@ -140,7 +140,7 @@ transformed data{
             pij_02[i] = (la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2))));
             pij_0[i,j] = pij_01[j]*pij_02[i];
             Bij[i,j] = GPij[i,j];
-            Delta_ij[i,j] = -pij_0[i,j]/(1+exp(b1*Bij[i,j]+log(pij_0[i,j]/(1-pij_0[i,j]))))+(1-pij_0[i,j])/(1+exp(-b2*Bij[i,j]-log(pij_0[i,j]/(1-pij_0[i,j]))));    //  Modified Andreas version
+            Delta_ij[i,j] = -pij_0[i,j]/(1+exp(b1*Bij[i,j]+log(pij_0[i,j]/(1-pij_0[i,j]))))+(1-pij_0[i,j])/(1+exp(-b2*Bij[i,j]-log(pij_0[i,j]/(1-pij_0[i,j]))));
           }
         }
       }
@@ -154,7 +154,7 @@ transformed data{
     f[2:(n2+1),2:(n1+1)] = pij_0 + Delta_ij;  // At the interior, dose response is non-interaction + interaction
     
     // Variances
-    s2 ~ inv_gamma(3,2);
+    s2 ~ inv_gamma(3,0.5);
     s2_ec50_1 ~ inv_gamma(3,2);
     s2_ec50_2 ~ inv_gamma(3,2);
     s2_gamma0 ~ inv_gamma(3,2);
@@ -174,8 +174,8 @@ transformed data{
     b2 ~ gamma(1,1);
     
     // Interaction
-    ell ~ gamma(1,1);
-    sigma_f ~ lognormal(1,1);
+    ell ~ inv_gamma(5,5);
+    sigma_f ~ lognormal(0,1);
     if (est_alpha){
       alpha ~ gamma(1,1);
     }

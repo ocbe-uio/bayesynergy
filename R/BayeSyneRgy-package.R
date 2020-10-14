@@ -1,10 +1,10 @@
-#' BayeSyneRgy
+#' bayesynergy
 #' 
-#' @name BayeSyneRgy
+#' @name bayesynergy
 #' @docType package
 #' @import Rcpp
 #' @import methods
 #' @importFrom rstan sampling
-#' @useDynLib BayeSyneRgy, .registration = TRUE
+#' @useDynLib bayesynergy, .registration = TRUE
 #' 
 NULL

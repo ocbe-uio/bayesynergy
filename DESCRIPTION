@@ -1,49 +1,38 @@
-Package: BayeSyneRgy
+Package: bayesynergy
 Type: Package
 Title: Bayesian semi-parametric modelling for in-vitro drug combination experiments
-Version: 2.0
+Version: 2.1
 Date: 2020-08-04
 Author: Andrea Cremaschi, Leiv Rønneberg, Manuela Zucknick
-Maintainer: Andrea Cremaschi <andrea.cremaschi@medisin.uio.no>, Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
+Maintainer: Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
 Description: The package implements a spline or Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between spline or GP model, the latter available with different kernels for the definition of the covariance structure.
 License: GPL (>= 2)
 Imports: 
-    caTools,
-    coda,
     doParallel,
     doSNOW,
     foreach,
     ggplot2,
     ggridges,
-    graphics,
-    grDevices,
     gridExtra,
+    inlmisc,
     methods,
-    mvnfast,
-    mvtnorm,
-    plot3D,
-    Rcpp (>= 1.0.1),
+    plotly,
+    Rcpp (>= 0.12.0),
     RcppParallel (>= 5.0.1),
-    rgl,
     rstan (>= 2.18.1),
     rstantools (>= 2.1.1),
     scales,
-    stringr,
-    viridis,
-    plotly
+    viridis
 Depends: 
     R (>= 3.4.0)
-Suggests: 
 LinkingTo: 
     BH (>= 1.66.0),
     Rcpp (>= 0.12.0),
-    RcppArmadillo,
     RcppEigen (>= 0.3.3.3.0),
     RcppParallel (>= 5.0.1),
-    RcppProgress,
     rstan (>= 2.18.1),
     StanHeaders (>= 2.18.0)
 Encoding: UTF-8
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Biarch: true
 SystemRequirements: GNU make
