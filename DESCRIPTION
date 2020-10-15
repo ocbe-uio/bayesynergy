@@ -3,9 +3,9 @@ Type: Package
 Title: Bayesian semi-parametric modelling for in-vitro drug combination experiments
 Version: 2.1
 Date: 2020-08-04
-Author: Andrea Cremaschi, Leiv Rønneberg, Manuela Zucknick
+Author: Leiv Rønneberg, Andrea Cremaschi, Manuela Zucknick
 Maintainer: Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
-Description: The package implements a spline or Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between spline or GP model, the latter available with different kernels for the definition of the covariance structure.
+Description: The package implements a Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between different kernels for the definition of the covariance structure.
 License: GPL (>= 2)
 Imports: 
     doParallel,
