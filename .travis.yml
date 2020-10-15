@@ -3,8 +3,6 @@ r:
   - release
   - devel
   - oldrel
-latex: true
-warnings_are_errors: FALSE
 
 addons:
   apt:
@@ -15,17 +13,9 @@ addons:
       - libmpfr-dev
       - libnode-dev
 
-env:
-  global:
-    - _R_CHECK_FORCE_SUGGESTS_=true
-    - _R_CHECK_CRAN_INCOMING_=true
-
-
 before_install:
   - mkdir -p ~/.R
   - echo "CXX14FLAGS=-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function  -Wno-macro-redefined" >> ~/.R/Makevars
   - echo "CXX14=g++ -std=c++1y -fext-numeric-literals -fPIC" >> ~/.R/Makevars
 
 
-after_success:
-  - R CMD INSTALL $PKG_TARBALL
