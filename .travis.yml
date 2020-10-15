@@ -5,6 +5,15 @@ r:
   - oldrel
 warnings_are_errors: FALSE
 
+addons:
+  apt:
+    packages:
+      - libudunits2-dev
+      - libgdal-dev
+      - libproj-dev
+      - libmpfr-dev
+      - libnode-dev
+
 before_install:
   - mkdir -p ~/.R
   - echo "CXX14FLAGS=-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function  -Wno-macro-redefined" >> ~/.R/Makevars
