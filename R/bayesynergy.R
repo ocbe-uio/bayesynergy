@@ -1,19 +1,30 @@
 #' Bayesian semi-parametric modelling for in-vitro drug combination experiments
 #' 
 #' @description 
-#' The function \code{bayesynergy} is the main function of the BayeSyneRgy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects. 
+#' The function \code{bayesynergy} is the main function of the bayesynergy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects. 
 #' 
-#' @param y vector or matrix of viability measures.
+#' @param y vector or matrix of viability measures. Replicates can be given in long or wide format.
 #' @param x two-column matrix of drug concentrations.
 #' @param type integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).
 #' @param drug_names vector of size 2; names of the drugs utilized for the experiment.
 #' @param experiment_ID character; identifier of experiment, typically name of cell Line.
 #' @param log10_conc logical; if TRUE concentrations are assumed given on the log10 scale.
-#' @param lower_asymptotes logical; if TRUE the model will estimate lower estimate of monotherapy curves.
-#' @param nu numeric; the nu parameter for the Matern kernel. Must be one of {`0.5`,`1.5`,`2.5`}
+#' @param lower_asymptotes logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.
+#' @param nu numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)
 #' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
 #' @param control list; passed on to the stan sampler, e.g. for setting adapt_delta.
-#' @param ... Arguments passed to `rstan::sampling` (e.g. iter, chains).
+#' @param ... Arguments passed to \code{\link[rstan:sampling]{rstan::sampling}} or \code{\link[rstan:vb]{rstan::vb}} (e.g. iter, chains).
+#' 
+#' @return An object of S3 class "\code{bayesynergy}", which is a list with the following entries
+#' \tabular{ll}{
+#' stanfit \tab An object of class \code{\link[rstan:stanmodel-class]{stanmodel}}, returned from the sampler. \cr
+#' posterior_mean \tab A list containing the posterior means of model parameters. \cr
+#' data \tab A list containing the original data used to fit the model. \cr
+#' model \tab A list containing model specification for the model fit. \cr
+#' returnCode \tab numeric; non-zero values indicate model was fit with errors or warnings \cr
+#' LPML \tab numeric; The log pseudo-marginal likelihood of the fitted model. \cr
+#' }
+#' 
 #' 
 #' @examples 
 #' library(bayesynergy)
@@ -99,7 +110,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
     nmissing = length(rep(1:nrow(Xgrid),nrep))-length(ii_obs) # How many missing?
   } else {
     nrep = max(table(ii_obs))
-    nmissing = (length(unqX1)+length(unqX2)+length(unqX1)*length(unqX2)+1)*nrep-length(y)
+    ii_obs = ii_obs[which(!is.na(y))] # Removing those that are missing
+    nmissing = (length(unqX1)+length(unqX2)+length(unqX1)*length(unqX2)+1)*nrep-length(ii_obs)
   }
   
   y = as.vector(y)

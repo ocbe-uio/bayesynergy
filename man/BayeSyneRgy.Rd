@@ -20,7 +20,7 @@ bayesynergy(
 )
 }
 \arguments{
-\item{y}{vector or matrix of viability measures.}
+\item{y}{vector or matrix of viability measures. Replicates can be given in long or wide format.}
 
 \item{x}{two-column matrix of drug concentrations.}
 
@@ -32,18 +32,29 @@ bayesynergy(
 
 \item{log10_conc}{logical; if TRUE concentrations are assumed given on the log10 scale.}
 
-\item{lower_asymptotes}{logical; if TRUE the model will estimate lower estimate of monotherapy curves.}
+\item{lower_asymptotes}{logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.}
 
-\item{nu}{numeric; the nu parameter for the Matern kernel. Must be one of {`0.5`,`1.5`,`2.5`}}
+\item{nu}{numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)}
 
 \item{method}{The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.}
 
 \item{control}{list; passed on to the stan sampler, e.g. for setting adapt_delta.}
 
-\item{...}{Arguments passed to `rstan::sampling` (e.g. iter, chains).}
+\item{...}{Arguments passed to \code{\link[rstan:sampling]{rstan::sampling}} or \code{\link[rstan:vb]{rstan::vb}} (e.g. iter, chains).}
+}
+\value{
+An object of S3 class "\code{bayesynergy}", which is a list with the following entries
+\tabular{ll}{
+stanfit \tab An object of class \code{\link[rstan:stanmodel-class]{stanmodel}}, returned from the sampler. \cr
+posterior_mean \tab A list containing the posterior means of model parameters. \cr
+data \tab A list containing the original data used to fit the model. \cr
+model \tab A list containing model specification for the model fit. \cr
+returnCode \tab numeric; non-zero values indicate model was fit with errors or warnings \cr
+LPML \tab numeric; The log pseudo-marginal likelihood of the fitted model. \cr
+}
 }
 \description{
-The function \code{bayesynergy} is the main function of the BayeSyneRgy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects.
+The function \code{bayesynergy} is the main function of the bayesynergy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects.
 }
 \examples{
 library(bayesynergy)
