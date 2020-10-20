@@ -33,6 +33,8 @@
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
 #' fit <- bayesynergy(y_mat,x_mat)
 #' 
+#' @importFrom utils modifyList
+#' 
 #' @export
 
 

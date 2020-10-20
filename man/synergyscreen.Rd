@@ -7,6 +7,7 @@
 synergyscreen(
   experiments,
   metric = c("rVUS_syn", "rVUS_ant"),
+  return_samples = F,
   save_raw = T,
   save_plots = T,
   path = NULL,
@@ -17,9 +18,11 @@ synergyscreen(
 )
 }
 \arguments{
-\item{experiments}{A list of experiments obtained from a high-throughput screen. See *Details* for more information on the structure of each element}
+\item{experiments}{A list of experiments obtained from a high-throughput screen. See *Details* for more information on the structure of each element.}
 
-\item{metric}{The metric returned to the user. Must be a named variable from the \code{Summary_Ouput} of the S3 BayeSyneRgy object.}
+\item{metric}{A vector of metrics of interest returned to the user. Must be a vector of named variables from the \code{posterior_mean} list of the S3 \code{bayesynergy} object.}
+
+\item{return_samples}{logical; if TRUE, the function returns posterior samples of each metric.}
 
 \item{save_raw}{logical; if TRUE, the raw bayesynergy object is saved for each individual experiment.}
 
@@ -35,6 +38,15 @@ synergyscreen(
 
 \item{bayesynergy_params}{list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.}
 }
+\value{
+A list of equal length as \code{experiments}, each element containing
+\tabular{ll}{
+summaries \tab summary statistics for variables defined in \code{metric}. \cr
+drug_names \tab names of the drugs utilized for the experiment. \cr
+experiment_ID \tab identifier of experiment, typically name of cell Line. \cr
+samples \tab if requested, posterior samples of variables defined in \code{metric}.
+}
+}
 \description{
 The function \code{synergyscreen} allows the fitting of high-throughput drug combination screens through parallel processing
 }
@@ -42,7 +54,7 @@ The function \code{synergyscreen} allows the fitting of high-throughput drug com
 The elements of \strong{experiments} must themselves be lists with the following elements
 \tabular{ll}{
 y: \tab matrix of viability scores \cr
-y: \tab matrix of concentrations \cr
+x: \tab matrix of concentrations \cr
 drug_names: \tab vector of drug names in the experiment \cr
 experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line name.
 }
@@ -51,8 +63,12 @@ experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line nam
 \dontrun{
 library(bayesynergy)
 data("mathews_DLBCL")
-experiment1 = list(y = mathews_DLBCL[[1]][[1]], x = mathews_DLBCL[[1]][[2]], drug_names = c("ispinesib","ibrutinib"),experiment_ID = "experiment1")
-experiment2 = list(y = mathews_DLBCL[[2]][[1]], x = mathews_DLBCL[[2]][[2]], drug_names = c("canertinib","ibrutinib"),experiment_ID = "experiment2")
+experiment1 = list(y = mathews_DLBCL[[1]][[1]], 
+x = mathews_DLBCL[[1]][[2]], 
+drug_names = c("ispinesib","ibrutinib"))
+experiment2 = list(y = mathews_DLBCL[[2]][[1]], 
+x = mathews_DLBCL[[2]][[2]], 
+drug_names = c("canertinib","ibrutinib"))
 experiments = list(experiment1,experiment2)
 fit <- synergyscreen(experiments)
 }

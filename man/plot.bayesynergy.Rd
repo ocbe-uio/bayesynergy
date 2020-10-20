@@ -7,9 +7,9 @@
 \method{plot}{bayesynergy}(x, plot3D = T, save_plot = FALSE, path = NULL, plotdevice = "pdf", ...)
 }
 \arguments{
-\item{x}{bayesynergy object, the result of \code{\link{bayesynergy}}.}
+\item{x}{An object of class \code{bayesynergy}, the result of \code{\link{bayesynergy}}.}
 
-\item{plot3D}{logical; if TRUE interactive 3d surface plots of dose response function are displayed.}
+\item{plot3D}{logical; if TRUE, interactive 3D surface plots of dose response function are displayed.}
 
 \item{save_plot}{logical; if TRUE plots are saved locally.}
 

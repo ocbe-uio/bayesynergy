@@ -63,9 +63,6 @@ transformed data{
     real<lower=0> s2;
     real<lower=0> s2_ec50_1;
     real<lower=0> s2_ec50_2; 
-    real<lower=0> s2_gamma0;
-    real<lower=0> s2_gamma1;
-    real<lower=0> s2_gamma2;
   }
   transformed parameters{
     matrix<lower=0, upper=1>[n2,n1] pij_0;        // Non-interaction
@@ -137,16 +134,13 @@ transformed data{
     f[2:(n2+1),2:(n1+1)] = pij_0 + Delta_ij;  // At the interior, dose response is non-interaction + interaction
     
     // Variances
-    s2 ~ inv_gamma(3,2);
+    s2 ~ inv_gamma(3,0.5);
     s2_ec50_1 ~ inv_gamma(3,2);
     s2_ec50_2 ~ inv_gamma(3,2);
-    s2_gamma0 ~ inv_gamma(3,2);
-    s2_gamma1 ~ inv_gamma(3,2);
-    s2_gamma2 ~ inv_gamma(3,2);
     
     // Monotherapies
-    la_1 ~ beta(1,1);
-    la_2 ~ beta(1,1);
+    la_1 ~ beta(.5,.5);
+    la_2 ~ beta(.5,.5);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
     ec50_1 ~ normal(0,sqrt(s2_ec50_1));

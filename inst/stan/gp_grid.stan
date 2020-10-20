@@ -69,9 +69,6 @@ transformed data{
     real<lower=0> s2;
     real<lower=0> s2_ec50_1;
     real<lower=0> s2_ec50_2; 
-    real<lower=0> s2_gamma0;
-    real<lower=0> s2_gamma1;
-    real<lower=0> s2_gamma2;
   }
   transformed parameters{
     matrix<lower=0, upper=1>[n2,n1] pij_0;        // Non-interaction
@@ -135,9 +132,9 @@ transformed data{
           la_2_param = 0;
         }
         for (j in 1:n1){
-          pij_01[j] = (la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1))));
+          pij_01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
           for (i in 1:n2){
-            pij_02[i] = (la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2))));
+            pij_02[i] = la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2)));
             pij_0[i,j] = pij_01[j]*pij_02[i];
             Bij[i,j] = GPij[i,j];
             Delta_ij[i,j] = -pij_0[i,j]/(1+exp(b1*Bij[i,j]+log(pij_0[i,j]/(1-pij_0[i,j]))))+(1-pij_0[i,j])/(1+exp(-b2*Bij[i,j]-log(pij_0[i,j]/(1-pij_0[i,j]))));
@@ -157,13 +154,10 @@ transformed data{
     s2 ~ inv_gamma(3,0.5);
     s2_ec50_1 ~ inv_gamma(3,2);
     s2_ec50_2 ~ inv_gamma(3,2);
-    s2_gamma0 ~ inv_gamma(3,2);
-    s2_gamma1 ~ inv_gamma(3,2);
-    s2_gamma2 ~ inv_gamma(3,2);
     
     // Monotherapies
-    la_1 ~ beta(1,1);
-    la_2 ~ beta(1,1);
+    la_1 ~ beta(.5,.5);
+    la_2 ~ beta(.5,.5);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
     ec50_1 ~ normal(0,sqrt(s2_ec50_1));
@@ -199,9 +193,9 @@ transformed data{
       real la_1_param;                          // lower_asymptotes
       real la_2_param;                          // lower_asymptotes
       real eps = 0.05;                          // for integration limits
-      real c11;                       // Integration limits dss_1
+      real c11;                                 // Integration limits dss_1
       real c12 = max(x1);                       // Integration limits dss_1
-      real c21;                       // Integration limits dss_1
+      real c21;                                 // Integration limits dss_1
       real c22 = max(x2);                       // Integration limits dss_1
       vector[n2] B_rVUS;                        // Placeholder for trapezoidal rule
       vector[n2] B_Delta;                       // Placeholder for trapezoidal rule
@@ -225,7 +219,7 @@ transformed data{
           la_2_param = 0;
         }
       
-      if ((1 - eps/2) > la_1_param){
+     if ((1 - eps/2) > la_1_param){
         c11 = (1/slope_1)*log10((1-la_1_param)/((1 - eps/2)-la_1_param)-1)+ec50_1;
         if (c11 < max(x1)){
           dss_1 = (c12-c11)+(la_1_param-1)/slope_1*(log10(1+10^(slope_1*(c12-ec50_1))) - log10(1+10^(slope_1*(c11-ec50_1))));

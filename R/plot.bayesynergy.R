@@ -2,8 +2,8 @@
 #' 
 #' @description A function for plotting synergy surfaces and summary statistics of a \code{bayesynergy} object.
 #' 
-#' @param x bayesynergy object, the result of \code{\link{bayesynergy}}.
-#' @param plot3D logical; if TRUE interactive 3d surface plots of dose response function are displayed.
+#' @param x An object of class \code{bayesynergy}, the result of \code{\link{bayesynergy}}.
+#' @param plot3D logical; if TRUE, interactive 3D surface plots of dose response function are displayed.
 #' @param save_plot logical; if TRUE plots are saved locally.
 #' @param path string; path for saving plots, if NULL defaults to work directory.
 #' @param plotdevice string; device for saving plots locally, must be 'pdf' or 'png'
@@ -27,6 +27,8 @@
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
 #' @importFrom inlmisc GetColors
+#' @importFrom grDevices dev.off pdf png
+#' @importFrom stats quantile
 #' 
 #' @export 
 
@@ -41,13 +43,13 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   if (is.null(path)){
     path = getwd()
   }
+  # Check that path exists, if not create it
+  if (!dir.exists(path)){
+    dir.create(path)
+  }
   # Put dirmark on file path
   path = Sys.glob(path,dirmark = T)
 
-  
-  #Close all graphic tools open
-  # graphics.off()
-  # 
   # Creating some stuff needed for plots
   posterior = rstan::extract(x$stanfit)
   n.save = length(posterior$lp__)
