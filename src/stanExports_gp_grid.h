@@ -33,7 +33,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_gp_grid");
-    reader.add_event(270, 268, "end", "model_gp_grid");
+    reader.add_event(271, 269, "end", "model_gp_grid");
     return reader;
 }
 template <typename T0__, typename T1__, typename T2__>
@@ -731,124 +731,124 @@ public:
             stan::math::fill(Delta_ij, DUMMY_VAR__);
             // transformed parameters block statements
             {
-            current_statement_begin__ = 81;
+            current_statement_begin__ = 80;
             local_scalar_t__ la_1_param(DUMMY_VAR__);
             (void) la_1_param;  // dummy to suppress unused var warning
             stan::math::initialize(la_1_param, DUMMY_VAR__);
             stan::math::fill(la_1_param, DUMMY_VAR__);
-            current_statement_begin__ = 82;
+            current_statement_begin__ = 81;
             local_scalar_t__ la_2_param(DUMMY_VAR__);
             (void) la_2_param;  // dummy to suppress unused var warning
             stan::math::initialize(la_2_param, DUMMY_VAR__);
             stan::math::fill(la_2_param, DUMMY_VAR__);
-            current_statement_begin__ = 85;
+            current_statement_begin__ = 84;
             validate_non_negative_index("GPij", "n2", n2);
             validate_non_negative_index("GPij", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> GPij(n2, n1);
             stan::math::initialize(GPij, DUMMY_VAR__);
             stan::math::fill(GPij, DUMMY_VAR__);
-            current_statement_begin__ = 86;
+            current_statement_begin__ = 85;
             validate_non_negative_index("Bij", "n2", n2);
             validate_non_negative_index("Bij", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> Bij(n2, n1);
             stan::math::initialize(Bij, DUMMY_VAR__);
             stan::math::fill(Bij, DUMMY_VAR__);
-            current_statement_begin__ = 89;
+            current_statement_begin__ = 88;
             validate_non_negative_index("cov1", "n1", n1);
             validate_non_negative_index("cov1", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> cov1(n1, n1);
             stan::math::initialize(cov1, DUMMY_VAR__);
             stan::math::fill(cov1, DUMMY_VAR__);
-            current_statement_begin__ = 90;
+            current_statement_begin__ = 89;
             validate_non_negative_index("cov2", "n2", n2);
             validate_non_negative_index("cov2", "n2", n2);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> cov2(n2, n2);
             stan::math::initialize(cov2, DUMMY_VAR__);
             stan::math::fill(cov2, DUMMY_VAR__);
-            current_statement_begin__ = 91;
+            current_statement_begin__ = 90;
             validate_non_negative_index("L_cov1", "n1", n1);
             validate_non_negative_index("L_cov1", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> L_cov1(n1, n1);
             stan::math::initialize(L_cov1, DUMMY_VAR__);
             stan::math::fill(L_cov1, DUMMY_VAR__);
-            current_statement_begin__ = 92;
+            current_statement_begin__ = 91;
             validate_non_negative_index("L_cov2", "n2", n2);
             validate_non_negative_index("L_cov2", "n2", n2);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> L_cov2(n2, n2);
             stan::math::initialize(L_cov2, DUMMY_VAR__);
             stan::math::fill(L_cov2, DUMMY_VAR__);
-            current_statement_begin__ = 93;
+            current_statement_begin__ = 92;
             if (as_bool(logical_eq(kernel, 1))) {
-                current_statement_begin__ = 94;
+                current_statement_begin__ = 93;
                 stan::math::assign(cov1, add(multiply(sigma_f, stan::math::exp(elt_divide(minus(x1dist_squared), (2 * pow(ell, 2))))), diag_matrix(rep_vector(1e-10, n1))));
-                current_statement_begin__ = 95;
+                current_statement_begin__ = 94;
                 stan::math::assign(cov2, add(stan::math::exp(elt_divide(minus(x2dist_squared), (2 * pow(ell, 2)))), diag_matrix(rep_vector(1e-10, n2))));
             } else if (as_bool(logical_eq(kernel, 2))) {
                 {
-                current_statement_begin__ = 98;
+                current_statement_begin__ = 97;
                 validate_non_negative_index("poly1", "n1", n1);
                 validate_non_negative_index("poly1", "n1", n1);
                 Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> poly1(n1, n1);
                 stan::math::initialize(poly1, DUMMY_VAR__);
                 stan::math::fill(poly1, DUMMY_VAR__);
-                current_statement_begin__ = 99;
+                current_statement_begin__ = 98;
                 validate_non_negative_index("poly2", "n2", n2);
                 validate_non_negative_index("poly2", "n2", n2);
                 Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> poly2(n2, n2);
                 stan::math::initialize(poly2, DUMMY_VAR__);
                 stan::math::fill(poly2, DUMMY_VAR__);
-                current_statement_begin__ = 100;
+                current_statement_begin__ = 99;
                 if (as_bool(logical_eq(nu_matern, 1))) {
-                    current_statement_begin__ = 101;
+                    current_statement_begin__ = 100;
                     stan::math::assign(poly1, rep_matrix(1, n1, n1));
-                    current_statement_begin__ = 102;
+                    current_statement_begin__ = 101;
                     stan::math::assign(poly2, rep_matrix(1, n2, n2));
-                    current_statement_begin__ = 103;
+                    current_statement_begin__ = 102;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(minus(x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 104;
+                    current_statement_begin__ = 103;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(minus(x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 } else if (as_bool(logical_eq(nu_matern, 2))) {
-                    current_statement_begin__ = 107;
+                    current_statement_begin__ = 106;
                     stan::math::assign(poly1, add(1, multiply(stan::math::sqrt(3), elt_divide(x1dist, ell))));
-                    current_statement_begin__ = 108;
+                    current_statement_begin__ = 107;
                     stan::math::assign(poly2, add(1, multiply(stan::math::sqrt(3), elt_divide(x2dist, ell))));
-                    current_statement_begin__ = 109;
+                    current_statement_begin__ = 108;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(3)), x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 110;
+                    current_statement_begin__ = 109;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(3)), x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 } else if (as_bool(logical_eq(nu_matern, 3))) {
-                    current_statement_begin__ = 113;
+                    current_statement_begin__ = 112;
                     stan::math::assign(poly1, add(add(1, multiply(stan::math::sqrt(5), elt_divide(x1dist, ell))), multiply((5. / 3.), elt_divide(x1dist_squared, pow(ell, 2)))));
-                    current_statement_begin__ = 114;
+                    current_statement_begin__ = 113;
                     stan::math::assign(poly2, add(add(1, multiply(stan::math::sqrt(5), elt_divide(x2dist, ell))), multiply((5. / 3.), elt_divide(x2dist_squared, pow(ell, 2)))));
-                    current_statement_begin__ = 115;
+                    current_statement_begin__ = 114;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(5)), x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 116;
+                    current_statement_begin__ = 115;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(5)), x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 }
                 }
             } else if (as_bool(logical_eq(kernel, 3))) {
-                current_statement_begin__ = 120;
+                current_statement_begin__ = 119;
                 stan::math::assign(cov1, add(multiply(sigma_f, stan::math::exp(multiply(-(get_base1(alpha, 1, "alpha", 1)), stan::math::log(add(1, elt_divide(x1dist_squared, ((2 * get_base1(alpha, 1, "alpha", 1)) * pow(ell, 2)))))))), diag_matrix(rep_vector(1e-10, n1))));
-                current_statement_begin__ = 121;
+                current_statement_begin__ = 120;
                 stan::math::assign(cov2, add(stan::math::exp(multiply(-(get_base1(alpha, 1, "alpha", 1)), stan::math::log(add(1, elt_divide(x2dist_squared, ((2 * get_base1(alpha, 1, "alpha", 1)) * pow(ell, 2))))))), diag_matrix(rep_vector(1e-10, n2))));
             }
-            current_statement_begin__ = 123;
+            current_statement_begin__ = 122;
             stan::math::assign(L_cov1, cholesky_decompose(cov1));
-            current_statement_begin__ = 124;
+            current_statement_begin__ = 123;
             stan::math::assign(L_cov2, cholesky_decompose(cov2));
-            current_statement_begin__ = 125;
+            current_statement_begin__ = 124;
             stan::math::assign(GPij, kron_mvprod(L_cov1, L_cov2, z, pstream__));
-            current_statement_begin__ = 127;
+            current_statement_begin__ = 126;
             if (as_bool(est_la)) {
-                current_statement_begin__ = 128;
+                current_statement_begin__ = 127;
                 stan::math::assign(la_1_param, get_base1(la_1, 1, "la_1", 1));
-                current_statement_begin__ = 129;
+                current_statement_begin__ = 128;
                 stan::math::assign(la_2_param, get_base1(la_2, 1, "la_2", 1));
             } else {
-                current_statement_begin__ = 131;
+                current_statement_begin__ = 130;
                 stan::math::assign(la_1_param, 0);
-                current_statement_begin__ = 132;
+                current_statement_begin__ = 131;
                 stan::math::assign(la_2_param, 0);
             }
             current_statement_begin__ = 134;
@@ -1221,124 +1221,124 @@ public:
             stan::math::fill(Delta_ij, DUMMY_VAR__);
             // do transformed parameters statements
             {
-            current_statement_begin__ = 81;
+            current_statement_begin__ = 80;
             local_scalar_t__ la_1_param(DUMMY_VAR__);
             (void) la_1_param;  // dummy to suppress unused var warning
             stan::math::initialize(la_1_param, DUMMY_VAR__);
             stan::math::fill(la_1_param, DUMMY_VAR__);
-            current_statement_begin__ = 82;
+            current_statement_begin__ = 81;
             local_scalar_t__ la_2_param(DUMMY_VAR__);
             (void) la_2_param;  // dummy to suppress unused var warning
             stan::math::initialize(la_2_param, DUMMY_VAR__);
             stan::math::fill(la_2_param, DUMMY_VAR__);
-            current_statement_begin__ = 85;
+            current_statement_begin__ = 84;
             validate_non_negative_index("GPij", "n2", n2);
             validate_non_negative_index("GPij", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> GPij(n2, n1);
             stan::math::initialize(GPij, DUMMY_VAR__);
             stan::math::fill(GPij, DUMMY_VAR__);
-            current_statement_begin__ = 86;
+            current_statement_begin__ = 85;
             validate_non_negative_index("Bij", "n2", n2);
             validate_non_negative_index("Bij", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> Bij(n2, n1);
             stan::math::initialize(Bij, DUMMY_VAR__);
             stan::math::fill(Bij, DUMMY_VAR__);
-            current_statement_begin__ = 89;
+            current_statement_begin__ = 88;
             validate_non_negative_index("cov1", "n1", n1);
             validate_non_negative_index("cov1", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> cov1(n1, n1);
             stan::math::initialize(cov1, DUMMY_VAR__);
             stan::math::fill(cov1, DUMMY_VAR__);
-            current_statement_begin__ = 90;
+            current_statement_begin__ = 89;
             validate_non_negative_index("cov2", "n2", n2);
             validate_non_negative_index("cov2", "n2", n2);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> cov2(n2, n2);
             stan::math::initialize(cov2, DUMMY_VAR__);
             stan::math::fill(cov2, DUMMY_VAR__);
-            current_statement_begin__ = 91;
+            current_statement_begin__ = 90;
             validate_non_negative_index("L_cov1", "n1", n1);
             validate_non_negative_index("L_cov1", "n1", n1);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> L_cov1(n1, n1);
             stan::math::initialize(L_cov1, DUMMY_VAR__);
             stan::math::fill(L_cov1, DUMMY_VAR__);
-            current_statement_begin__ = 92;
+            current_statement_begin__ = 91;
             validate_non_negative_index("L_cov2", "n2", n2);
             validate_non_negative_index("L_cov2", "n2", n2);
             Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> L_cov2(n2, n2);
             stan::math::initialize(L_cov2, DUMMY_VAR__);
             stan::math::fill(L_cov2, DUMMY_VAR__);
-            current_statement_begin__ = 93;
+            current_statement_begin__ = 92;
             if (as_bool(logical_eq(kernel, 1))) {
-                current_statement_begin__ = 94;
+                current_statement_begin__ = 93;
                 stan::math::assign(cov1, add(multiply(sigma_f, stan::math::exp(elt_divide(minus(x1dist_squared), (2 * pow(ell, 2))))), diag_matrix(rep_vector(1e-10, n1))));
-                current_statement_begin__ = 95;
+                current_statement_begin__ = 94;
                 stan::math::assign(cov2, add(stan::math::exp(elt_divide(minus(x2dist_squared), (2 * pow(ell, 2)))), diag_matrix(rep_vector(1e-10, n2))));
             } else if (as_bool(logical_eq(kernel, 2))) {
                 {
-                current_statement_begin__ = 98;
+                current_statement_begin__ = 97;
                 validate_non_negative_index("poly1", "n1", n1);
                 validate_non_negative_index("poly1", "n1", n1);
                 Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> poly1(n1, n1);
                 stan::math::initialize(poly1, DUMMY_VAR__);
                 stan::math::fill(poly1, DUMMY_VAR__);
-                current_statement_begin__ = 99;
+                current_statement_begin__ = 98;
                 validate_non_negative_index("poly2", "n2", n2);
                 validate_non_negative_index("poly2", "n2", n2);
                 Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, Eigen::Dynamic> poly2(n2, n2);
                 stan::math::initialize(poly2, DUMMY_VAR__);
                 stan::math::fill(poly2, DUMMY_VAR__);
-                current_statement_begin__ = 100;
+                current_statement_begin__ = 99;
                 if (as_bool(logical_eq(nu_matern, 1))) {
-                    current_statement_begin__ = 101;
+                    current_statement_begin__ = 100;
                     stan::math::assign(poly1, rep_matrix(1, n1, n1));
-                    current_statement_begin__ = 102;
+                    current_statement_begin__ = 101;
                     stan::math::assign(poly2, rep_matrix(1, n2, n2));
-                    current_statement_begin__ = 103;
+                    current_statement_begin__ = 102;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(minus(x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 104;
+                    current_statement_begin__ = 103;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(minus(x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 } else if (as_bool(logical_eq(nu_matern, 2))) {
-                    current_statement_begin__ = 107;
+                    current_statement_begin__ = 106;
                     stan::math::assign(poly1, add(1, multiply(stan::math::sqrt(3), elt_divide(x1dist, ell))));
-                    current_statement_begin__ = 108;
+                    current_statement_begin__ = 107;
                     stan::math::assign(poly2, add(1, multiply(stan::math::sqrt(3), elt_divide(x2dist, ell))));
-                    current_statement_begin__ = 109;
+                    current_statement_begin__ = 108;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(3)), x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 110;
+                    current_statement_begin__ = 109;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(3)), x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 } else if (as_bool(logical_eq(nu_matern, 3))) {
-                    current_statement_begin__ = 113;
+                    current_statement_begin__ = 112;
                     stan::math::assign(poly1, add(add(1, multiply(stan::math::sqrt(5), elt_divide(x1dist, ell))), multiply((5. / 3.), elt_divide(x1dist_squared, pow(ell, 2)))));
-                    current_statement_begin__ = 114;
+                    current_statement_begin__ = 113;
                     stan::math::assign(poly2, add(add(1, multiply(stan::math::sqrt(5), elt_divide(x2dist, ell))), multiply((5. / 3.), elt_divide(x2dist_squared, pow(ell, 2)))));
-                    current_statement_begin__ = 115;
+                    current_statement_begin__ = 114;
                     stan::math::assign(cov1, add(multiply(sigma_f, elt_multiply(poly1, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(5)), x1dist), ell)))), diag_matrix(rep_vector(1e-10, n1))));
-                    current_statement_begin__ = 116;
+                    current_statement_begin__ = 115;
                     stan::math::assign(cov2, add(elt_multiply(poly2, stan::math::exp(elt_divide(multiply(-(stan::math::sqrt(5)), x2dist), ell))), diag_matrix(rep_vector(1e-10, n2))));
                 }
                 }
             } else if (as_bool(logical_eq(kernel, 3))) {
-                current_statement_begin__ = 120;
+                current_statement_begin__ = 119;
                 stan::math::assign(cov1, add(multiply(sigma_f, stan::math::exp(multiply(-(get_base1(alpha, 1, "alpha", 1)), stan::math::log(add(1, elt_divide(x1dist_squared, ((2 * get_base1(alpha, 1, "alpha", 1)) * pow(ell, 2)))))))), diag_matrix(rep_vector(1e-10, n1))));
-                current_statement_begin__ = 121;
+                current_statement_begin__ = 120;
                 stan::math::assign(cov2, add(stan::math::exp(multiply(-(get_base1(alpha, 1, "alpha", 1)), stan::math::log(add(1, elt_divide(x2dist_squared, ((2 * get_base1(alpha, 1, "alpha", 1)) * pow(ell, 2))))))), diag_matrix(rep_vector(1e-10, n2))));
             }
-            current_statement_begin__ = 123;
+            current_statement_begin__ = 122;
             stan::math::assign(L_cov1, cholesky_decompose(cov1));
-            current_statement_begin__ = 124;
+            current_statement_begin__ = 123;
             stan::math::assign(L_cov2, cholesky_decompose(cov2));
-            current_statement_begin__ = 125;
+            current_statement_begin__ = 124;
             stan::math::assign(GPij, kron_mvprod(L_cov1, L_cov2, z, pstream__));
-            current_statement_begin__ = 127;
+            current_statement_begin__ = 126;
             if (as_bool(est_la)) {
-                current_statement_begin__ = 128;
+                current_statement_begin__ = 127;
                 stan::math::assign(la_1_param, get_base1(la_1, 1, "la_1", 1));
-                current_statement_begin__ = 129;
+                current_statement_begin__ = 128;
                 stan::math::assign(la_2_param, get_base1(la_2, 1, "la_2", 1));
             } else {
-                current_statement_begin__ = 131;
+                current_statement_begin__ = 130;
                 stan::math::assign(la_1_param, 0);
-                current_statement_begin__ = 132;
+                current_statement_begin__ = 131;
                 stan::math::assign(la_2_param, 0);
             }
             current_statement_begin__ = 134;

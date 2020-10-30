@@ -6,6 +6,7 @@ functions{
       return transpose(A * transpose(B * V));
   }
   // Building b spline basis
+  // Code from https://github.com/milkha/Splines_in_Stan
   vector build_b_spline(real[] t, real[] ext_knots, int ind, int order);
   vector build_b_spline(real[] t, real[] ext_knots, int ind, int order) {
     // INPUTS:
@@ -182,7 +183,7 @@ transformed data{
     f[2:(n2+1),2:(n1+1)] = pij_0 + Delta_ij;  // At the interior, dose response is non-interaction + interaction
     
     // Variances
-    s2 ~ inv_gamma(3,2);
+    s2 ~ inv_gamma(3,0.5);
     s2_ec50_1 ~ inv_gamma(3,2);
     s2_ec50_2 ~ inv_gamma(3,2);
     s2_gamma0 ~ inv_gamma(3,2);
@@ -190,8 +191,8 @@ transformed data{
     s2_gamma2 ~ inv_gamma(3,2);
     
     // Monotherapies
-    la_1 ~ beta(1,1);
-    la_2 ~ beta(1,1);
+    la_1 ~ beta(.5,.5);
+    la_2 ~ beta(.5,.5);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
     ec50_1 ~ normal(0,sqrt(s2_ec50_1));

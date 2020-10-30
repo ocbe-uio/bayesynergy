@@ -68,14 +68,13 @@ transformed data{
     // Variances
     real<lower=0> s2;
     real<lower=0> s2_ec50_1;
-    real<lower=0> s2_ec50_2; 
+    real<lower=0> s2_ec50_2;
   }
   transformed parameters{
     matrix<lower=0, upper=1>[n2,n1] pij_0;        // Non-interaction
     row_vector<lower=0, upper=1>[n1] pij_01;      // Monotherapy drug 1
     vector<lower=0, upper=1>[n2] pij_02;          // Monotherapy drug 2
     matrix<lower=-1,upper=1>[n2,n1] Delta_ij;     // Interaction
-    
     
       {
         real la_1_param;
@@ -131,6 +130,7 @@ transformed data{
           la_1_param = 0;
           la_2_param = 0;
         }
+        
         for (j in 1:n1){
           pij_01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
           for (i in 1:n2){
@@ -262,6 +262,7 @@ transformed data{
        rVUS_Delta = 100 * rVUS_Delta / (((max(x1)-min(x1))*(max(x2)-min(x2)))*fmax(max(pij_0),max(1-pij_0)));
        rVUS_syn = 100 * rVUS_syn / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(pij_0));
        rVUS_ant = 100 * rVUS_ant / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(1-pij_0));
+       
     }
   }
   
