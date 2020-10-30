@@ -11,7 +11,7 @@ data {
   int<lower=1> n2;                                        // No. of concentrations for drug 2
   int<lower=0> nmissing;                                  // No. of missing grid locations
   int<lower=1> nrep;                                      // No. of replicates
-  vector[(n1+n2+n1*n2+1)*nrep-nmissing] pij;              // Observed drug-response
+  vector[(n1+n2+n1*n2+1)*nrep-nmissing] y;                // Observed drug-response
   int ii_obs[(n1+n2+n1*n2+1)*nrep-nmissing];              // Indices of observed variables
   real x1[n1];                                            // Concentrations of drug 1
   real x2[n2];                                            // Concentrations of drug 2
@@ -53,6 +53,8 @@ transformed data{
     real ec50_2;
     real<lower=0> slope_1;
     real<lower=0> slope_2;
+    real t1;
+    real t2;
     
     // For Interaction transformation
     real<lower=0> b1;
@@ -71,18 +73,21 @@ transformed data{
     real<lower=0> s2_ec50_2;
   }
   transformed parameters{
-    matrix<lower=0, upper=1>[n2,n1] pij_0;        // Non-interaction
-    row_vector<lower=0, upper=1>[n1] pij_01;      // Monotherapy drug 1
-    vector<lower=0, upper=1>[n2] pij_02;          // Monotherapy drug 2
-    matrix<lower=-1,upper=1>[n2,n1] Delta_ij;     // Interaction
+    matrix<lower=0, upper=1>[n2,n1] p0;        // Non-interaction
+    row_vector<lower=0, upper=1>[n1] p01;      // Monotherapy drug 1
+    vector<lower=0, upper=1>[n2] p02;          // Monotherapy drug 2
+    matrix<lower=-1,upper=1>[n2,n1] Delta;     // Interaction
+    real beta1;
+    real beta2;
     
       {
         real la_1_param;
         real la_2_param;
+
         
         
-        matrix[n2,n1] GPij; // The GP itself
-        matrix[n2,n1] Bij; // Shorthand for what goes into g()
+        matrix[n2,n1] GP; // The GP itself
+        matrix[n2,n1] B; // Shorthand for what goes into g()
         
         // The kernel construction
         matrix[n1,n1] cov1;
@@ -121,7 +126,7 @@ transformed data{
         }
         L_cov1 = cholesky_decompose(cov1);
         L_cov2 = cholesky_decompose(cov2);
-        GPij = kron_mvprod(L_cov1,L_cov2,z);
+        GP = kron_mvprod(L_cov1,L_cov2,z);
         
         if (est_la){
           la_1_param = la_1[1];
@@ -131,13 +136,16 @@ transformed data{
           la_2_param = 0;
         }
         
+        beta1 = t1*la_1_param;
+        beta2 = t2*la_2_param;
+        
         for (j in 1:n1){
-          pij_01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
+          p01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
           for (i in 1:n2){
-            pij_02[i] = la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2)));
-            pij_0[i,j] = pij_01[j]*pij_02[i];
-            Bij[i,j] = GPij[i,j];
-            Delta_ij[i,j] = -pij_0[i,j]/(1+exp(b1*Bij[i,j]+log(pij_0[i,j]/(1-pij_0[i,j]))))+(1-pij_0[i,j])/(1+exp(-b2*Bij[i,j]-log(pij_0[i,j]/(1-pij_0[i,j]))));
+            p02[i] = la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2)));
+            p0[i,j] = p01[j]*p02[i];
+            B[i,j] = GP[i,j];
+            Delta[i,j] = -p0[i,j]/(1+exp(b1*B[i,j]+log(p0[i,j]/(1-p0[i,j]))))+(1-p0[i,j])/(1+exp(-b2*B[i,j]-log(p0[i,j]/(1-p0[i,j]))));
           }
         }
       }
@@ -146,9 +154,9 @@ transformed data{
     // Constructing the dose-response over the full (n2+1)x(n1+1) grid
     matrix[n2+1,n1+1] f;                      // The dose-response function
     f[1,1] = 1;                               // At (-Inf,-Inf) dose response is one
-    f[1,2:(n1+1)] = pij_01;                   // At (.,0) dose response is mono1
-    f[2:(n2+1),1] = pij_02;                   // At (0,.) dose response is mono2
-    f[2:(n2+1),2:(n1+1)] = pij_0 + Delta_ij;  // At the interior, dose response is non-interaction + interaction
+    f[1,2:(n1+1)] = p01;                      // At (.,0) dose response is mono1
+    f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
+    f[2:(n2+1),2:(n1+1)] = p0 + Delta;        // At the interior, dose response is non-interaction + interaction
     
     // Variances
     s2 ~ inv_gamma(3,0.5);
@@ -160,8 +168,10 @@ transformed data{
     la_2 ~ beta(.5,.5);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
-    ec50_1 ~ normal(0,sqrt(s2_ec50_1));
-    ec50_2 ~ normal(0,sqrt(s2_ec50_2));
+    ec50_1 ~ normal(beta1,sqrt(s2_ec50_1));
+    ec50_2 ~ normal(beta2,sqrt(s2_ec50_2));
+    t1 ~ std_normal();
+    t2 ~ std_normal();
     
     // Interaction transformation
     b1 ~ gamma(1,1);
@@ -176,7 +186,7 @@ transformed data{
     to_vector(z) ~ std_normal();
     
     // Response
-    pij ~ normal(to_vector(f)[ii_obs],sqrt(s2));
+    y ~ normal(to_vector(f)[ii_obs],sqrt(s2));
     
   }
   generated quantities {
@@ -195,20 +205,20 @@ transformed data{
       real eps = 0.05;                          // for integration limits
       real c11;                                 // Integration limits dss_1
       real c12 = max(x1);                       // Integration limits dss_1
-      real c21;                                 // Integration limits dss_1
-      real c22 = max(x2);                       // Integration limits dss_1
+      real c21;                                 // Integration limits dss_2
+      real c22 = max(x2);                       // Integration limits dss_2
       vector[n2] B_rVUS;                        // Placeholder for trapezoidal rule
       vector[n2] B_Delta;                       // Placeholder for trapezoidal rule
       vector[n2] B_syn;                         // Placeholder for trapezoidal rule
       vector[n2] B_ant;                         // Placeholder for trapezoidal rule
       // Setting up drug response function
       f[1,1] = 1;                               // At (-Inf,-Inf) dose response is one
-      f[1,2:(n1+1)] = pij_01;                   // At (.,0) dose response is mono1
-      f[2:(n2+1),1] = pij_02;                   // At (0,.) dose response is mono2
-      f[2:(n2+1),2:(n1+1)] = pij_0 + Delta_ij;  // At the interior, dose response is non-interaction + interaction
-      f_interior[1:n2,1:n1] = 1 - (pij_0 + Delta_ij);  // At the interior, dose response is non-interaction + interaction
+      f[1,2:(n1+1)] = p01;                      // At (.,0) dose response is mono1
+      f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
+      f[2:(n2+1),2:(n1+1)] = p0 + Delta;        // At the interior, dose response is non-interaction + interaction
+      f_interior[1:n2,1:n1] = 1 - (p0 + Delta);  // At the interior, dose response is non-interaction + interaction
       for (i in 1:N){
-        CPO[i] = exp(-normal_lpdf(pij[i] | to_vector(f)[ii_obs[i]],sqrt(s2)));
+        CPO[i] = exp(-normal_lpdf(y[i] | to_vector(f)[ii_obs[i]],sqrt(s2)));
       }
       // Calculating DSS
       if (est_la){
@@ -242,9 +252,9 @@ transformed data{
          real b_ant = 0;
          for (j in 2:n1){
            b_rVUS += (x1[j]-x1[(j-1)])*(f_interior[i,j]+f_interior[i,(j-1)])/2;
-           b_Delta += (x1[j]-x1[(j-1)])*(fabs(Delta_ij[i,j])+fabs(Delta_ij[i,(j-1)]))/2;
-           b_syn += (x1[j]-x1[(j-1)])*(fabs(fmin(Delta_ij[i,j],0))+fabs(fmin(Delta_ij[i,(j-1)],0)))/2;
-           b_ant += (x1[j]-x1[(j-1)])*(fabs(fmax(Delta_ij[i,j],0))+fabs(fmax(Delta_ij[i,(j-1)],0)))/2;
+           b_Delta += (x1[j]-x1[(j-1)])*(fabs(Delta[i,j])+fabs(Delta[i,(j-1)]))/2;
+           b_syn += (x1[j]-x1[(j-1)])*(fabs(fmin(Delta[i,j],0))+fabs(fmin(Delta[i,(j-1)],0)))/2;
+           b_ant += (x1[j]-x1[(j-1)])*(fabs(fmax(Delta[i,j],0))+fabs(fmax(Delta[i,(j-1)],0)))/2;
          }
          B_rVUS[i] = b_rVUS;
          B_Delta[i] = b_Delta;
@@ -259,10 +269,9 @@ transformed data{
        }
        // Normalizing
        rVUS_p = 100 * rVUS_p / ((max(x1)-min(x1))*(max(x2)-min(x2)));
-       rVUS_Delta = 100 * rVUS_Delta / (((max(x1)-min(x1))*(max(x2)-min(x2)))*fmax(max(pij_0),max(1-pij_0)));
-       rVUS_syn = 100 * rVUS_syn / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(pij_0));
-       rVUS_ant = 100 * rVUS_ant / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(1-pij_0));
-       
+       rVUS_Delta = 100 * rVUS_Delta / (((max(x1)-min(x1))*(max(x2)-min(x2)))*fmax(max(p0),max(1-p0)));
+       rVUS_syn = 100 * rVUS_syn / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(p0));
+       rVUS_ant = 100 * rVUS_ant / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(1-p0));
     }
   }
   

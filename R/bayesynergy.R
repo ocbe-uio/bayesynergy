@@ -131,7 +131,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   
   # Setting up data for Stan
   stan_data = list(n1=length(unqX1), n2=length(unqX2), x1=unqX1, x2=unqX2, nrep=nrep,
-       pij=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes)
+       y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes)
   if (type == 1){ # Splines
     stan_data$n_knots1 = n_knots1
     stan_data$n_knots2 = n_knots2
@@ -203,41 +203,41 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   LPML = -sum(log(apply(posterior$CPO,2,sum)/n.save))
   coef_names = names(posterior)
   # Remove those we don't care about
-  coef_names = setdiff(coef_names,c("pij_0","pij_01","pij_02","Delta_ij","CPO","lp__"))
+  coef_names = setdiff(coef_names,c("p0","p01","p02","Delta","CPO","lp__"))
 
   # Surfaces
   # Mean response
-  p_ij = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
-  p_ij[,1,1] = 1
-  p_ij[,2:(length(unqX2)+1),1] = posterior$pij_02
-  p_ij[,1,2:(length(unqX1)+1)] = posterior$pij_01
-  p_ij[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$pij_0+posterior$Delta_ij
-  p_ij_mean = apply(p_ij,c(2,3),mean)
-  colnames(p_ij_mean) = round(c(0,10^unqX1),4)
-  rownames(p_ij_mean) = round(c(0,10^unqX2),4)
+  f = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
+  f[,1,1] = 1
+  f[,2:(length(unqX2)+1),1] = posterior$p02
+  f[,1,2:(length(unqX1)+1)] = posterior$p01
+  f[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0+posterior$Delta
+  f_mean = apply(f,c(2,3),mean)
+  colnames(f_mean) = round(c(0,10^unqX1),4)
+  rownames(f_mean) = round(c(0,10^unqX2),4)
   # Mean non-interaction
-  p_0 = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
-  p_0[,1,1] = 1
-  p_0[,2:(length(unqX2)+1),1] = posterior$pij_02
-  p_0[,1,2:(length(unqX1)+1)] = posterior$pij_01
-  p_0[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$pij_0
-  p_0_mean = apply(p_0,c(2,3),mean)
-  colnames(p_0_mean) = round(c(0,10^unqX1),4)
-  rownames(p_0_mean) = round(c(0,10^unqX2),4)
+  p0 = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
+  p0[,1,1] = 1
+  p0[,2:(length(unqX2)+1),1] = posterior$p02
+  p0[,1,2:(length(unqX1)+1)] = posterior$p01
+  p0[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0
+  p0_mean = apply(p0,c(2,3),mean)
+  colnames(p0_mean) = round(c(0,10^unqX1),4)
+  rownames(p0_mean) = round(c(0,10^unqX2),4)
   # Mean interaction
   Delta = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
   Delta[,1,1] = 0
   Delta[,2:(length(unqX2)+1),1] = 0
   Delta[,1,2:(length(unqX1)+1)] = 0
-  Delta[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$Delta_ij
+  Delta[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$Delta
   Delta_mean = apply(Delta,c(2,3),mean)
   colnames(Delta_mean) = round(c(0,10^unqX1),4)
   rownames(Delta_mean) = round(c(0,10^unqX2),4)
   
   
   posterior_mean = as.list(rstan::summary(fit,pars=coef_names)$summary[,'mean'])
-  posterior_mean$p_ij = p_ij_mean
-  posterior_mean$p_0 = p_0_mean
+  posterior_mean$f = f_mean
+  posterior_mean$p0 = p0_mean
   posterior_mean$Delta = Delta_mean
   
   data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID)

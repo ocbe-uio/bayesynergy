@@ -98,7 +98,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   if(plot3D){
     
     # Response
-    z_response = x$posterior_mean$p_ij[-1,-1]
+    z_response = x$posterior_mean$f[-1,-1]
     fig = plot_ly(x = unqX1, y = unqX2, z = z_response)
     fig = fig %>% add_surface(cmin=0,cmax=1)
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
@@ -113,7 +113,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     # 
     
     # Noninteraction
-    z_p0 = x$posterior_mean$p_0[-1,-1]
+    z_p0 = x$posterior_mean$p0[-1,-1]
     fig = plot_ly(x = unqX1, y = unqX2, z = z_p0)
     fig = fig %>% add_surface(cmin=0,cmax=1)
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
@@ -195,8 +195,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   df = data.frame(
     x1 = Xgrid[,1],
     x2 = Xgrid[,2],
-    pij = as.vector(x$posterior_mean$p_ij[-1,-1]),
-    p0 = as.vector(x$posterior_mean$p_0[-1,-1]),
+    f = as.vector(x$posterior_mean$f[-1,-1]),
+    p0 = as.vector(x$posterior_mean$p0[-1,-1]),
     Delta = as.vector(x$posterior_mean$Delta[-1,-1])
   )
   
@@ -210,7 +210,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   }
   
   # Response
-  p3 = ggplot(data = df, aes(x = x1, y = x2, z = pij)) +
+  p3 = ggplot(data = df, aes(x = x1, y = x2, z = f)) +
     geom_contour_filled(breaks = breaks, show.legend = T, 
                         colour="dark grey", size=.5, linetype = "dashed") +
     scale_fill_manual(palette=viridis::viridis, values=breaklabel(10,breaks),
