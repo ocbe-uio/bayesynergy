@@ -300,8 +300,11 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
          y = "") +
     xlim(0,100) +
     scale_y_discrete(limits = unique(rev(df$idx)), 
-                     labels=c(expression(rVUS(Delta^"+")),expression(rVUS(Delta^"-")),
-                              expression(rVUS(paste("|", Delta, "|"))),expression(rVUS))) +
+                     labels=c(expression(paste("Antagonism (",rVUS(Delta^"+"),")")),
+                              expression(paste("Synergy (",rVUS(Delta^"-"),")")),
+                              expression(paste("Overall Interaction (",rVUS(paste("|", Delta, "|")),")")),
+                              expression(paste("Overall Efficacy (",rVUS,")")))) +
+                     # labels=c("Antagonism","Synergy","Overall Interaction","Overall Efficacy")) +
     theme_ridges(font_size = 13, grid = FALSE)
   
   
