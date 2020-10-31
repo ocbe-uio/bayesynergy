@@ -53,8 +53,6 @@ transformed data{
     real ec50_2;
     real<lower=0> slope_1;
     real<lower=0> slope_2;
-    real t1;
-    real t2;
     
     // For Interaction transformation
     real<lower=0> b1;
@@ -77,8 +75,6 @@ transformed data{
     row_vector<lower=0, upper=1>[n1] p01;      // Monotherapy drug 1
     vector<lower=0, upper=1>[n2] p02;          // Monotherapy drug 2
     matrix<lower=-1,upper=1>[n2,n1] Delta;     // Interaction
-    real beta1;
-    real beta2;
     
       {
         real la_1_param;
@@ -136,9 +132,6 @@ transformed data{
           la_2_param = 0;
         }
         
-        beta1 = t1*la_1_param;
-        beta2 = t2*la_2_param;
-        
         for (j in 1:n1){
           p01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
           for (i in 1:n2){
@@ -162,16 +155,15 @@ transformed data{
     s2 ~ inv_gamma(3,0.5);
     s2_ec50_1 ~ inv_gamma(3,2);
     s2_ec50_2 ~ inv_gamma(3,2);
+
     
     // Monotherapies
-    la_1 ~ beta(.5,.5);
-    la_2 ~ beta(.5,.5);
+    la_1 ~ beta(0.5,0.5);
+    la_2 ~ beta(0.5,0.5);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
-    ec50_1 ~ normal(beta1,sqrt(s2_ec50_1));
-    ec50_2 ~ normal(beta2,sqrt(s2_ec50_2));
-    t1 ~ std_normal();
-    t2 ~ std_normal();
+    ec50_1 ~ normal(0,sqrt(s2_ec50_1));
+    ec50_2 ~ normal(0,sqrt(s2_ec50_2));
     
     // Interaction transformation
     b1 ~ gamma(1,1);
