@@ -11,8 +11,10 @@ bayesynergy(
   type = 3,
   drug_names = NULL,
   experiment_ID = NULL,
-  log10_conc = FALSE,
-  lower_asymptotes = T,
+  units = NULL,
+  lower_asymptotes = F,
+  heteroscedastic = T,
+  lambda = 0.005,
   nu = 1.5,
   method = "sampling",
   control = list(),
@@ -30,9 +32,13 @@ bayesynergy(
 
 \item{experiment_ID}{character; identifier of experiment, typically name of cell Line.}
 
-\item{log10_conc}{logical; if TRUE concentrations are assumed given on the log10 scale.}
+\item{units}{vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")}
 
 \item{lower_asymptotes}{logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.}
+
+\item{heteroscedastic}{logical; if TRUE, the model will assume heteroscedastic measurement error.}
+
+\item{lambda}{numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.}
 
 \item{nu}{numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)}
 

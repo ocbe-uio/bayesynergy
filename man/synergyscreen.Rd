@@ -6,13 +6,13 @@
 \usage{
 synergyscreen(
   experiments,
-  metric = c("rVUS_syn", "rVUS_ant"),
   return_samples = F,
   save_raw = T,
   save_plots = T,
   path = NULL,
   parallel = T,
   max_cores = NULL,
+  max_retries = 3,
   plot_params = list(),
   bayesynergy_params = list()
 )
@@ -20,9 +20,7 @@ synergyscreen(
 \arguments{
 \item{experiments}{A list of experiments obtained from a high-throughput screen. See *Details* for more information on the structure of each element.}
 
-\item{metric}{A vector of metrics of interest returned to the user. Must be a vector of named variables from the \code{posterior_mean} list of the S3 \code{bayesynergy} object.}
-
-\item{return_samples}{logical; if TRUE, the function returns posterior samples of each metric.}
+\item{return_samples}{logical; if TRUE, the function returns the full fitted \code{\link[bayesynergy]{bayesynergy}} object.}
 
 \item{save_raw}{logical; if TRUE, the raw bayesynergy object is saved for each individual experiment.}
 
@@ -34,6 +32,8 @@ synergyscreen(
 
 \item{max_cores}{integer; the maximum number of cores to utilize for the parallel processing.}
 
+\item{max_retries}{intereger; the maximum number of retries utilized in model fit.}
+
 \item{plot_params}{list; parameters to be passed to the plotting function. See \link{plot.bayesynergy} for details.}
 
 \item{bayesynergy_params}{list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.}
@@ -41,10 +41,10 @@ synergyscreen(
 \value{
 A list of equal length as \code{experiments}, each element containing
 \tabular{ll}{
-summaries \tab summary statistics for variables defined in \code{metric}. \cr
+summaries \tab posterior summary statistics for variables of the model. \cr
 drug_names \tab names of the drugs utilized for the experiment. \cr
 experiment_ID \tab identifier of experiment, typically name of cell Line. \cr
-samples \tab if requested, posterior samples of variables defined in \code{metric}.
+fit \tab if requested, the fitted \code{\link[bayesynergy]{bayesynergy}} object.
 }
 }
 \description{

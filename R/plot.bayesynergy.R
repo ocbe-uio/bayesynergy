@@ -21,14 +21,15 @@
 #' fit <- bayesynergy(y_mat,x_mat)
 #' plot(fit)
 #' 
-#' @importFrom ggplot2 ggplot aes geom_smooth geom_point ylim xlim labs scale_x_continuous stat_contour_filled geom_contour_filled scale_fill_manual scale_y_continuous scale_y_discrete xlab ylab scale_fill_viridis_c guides guide_legend
+#' @importFrom ggplot2 ggplot aes geom_smooth geom_point ylim xlim labs scale_x_continuous stat_contour_filled geom_contour_filled scale_fill_manual scale_y_continuous scale_y_discrete xlab ylab scale_fill_viridis_c guides guide_legend geom_hline annotate coord_cartesian
 #' @importFrom ggridges geom_density_ridges_gradient theme_ridges
-#' @importFrom plotly plot_ly add_surface add_trace %>% plotly_build
+#' @importFrom plotly plot_ly add_surface add_trace %>% plotly_build as_widget add_paths
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
 #' @importFrom inlmisc GetColors
 #' @importFrom grDevices dev.off pdf png
 #' @importFrom stats quantile
+#' @importFrom htmlwidgets saveWidget 
 #' 
 #' @export 
 
@@ -83,14 +84,50 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   idx = !is.na(mono2$y)
   mono2 = mono2[idx,]
   
+  # Pull out indices we want
+  ii = x$data$indices[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0))]
+  # Also define residuals here
+  
   combination = data.frame(
     x1 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),1]),nrep),
     x2 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),2]),nrep),
-    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),])
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]),
+    f = 0,
+    p0 = 0,
+    Delta = 0,
+    residuals = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]) - as.vector(x$posterior_mean$p0)[ii]
   ) 
   # Remove NA here
   idx = !is.na(combination$y)
   combination = combination[idx,]
+  
+  ####################################################################################
+  # Monotherapies
+  ####################################################################################
+  grid.size = 100
+  x.seq1 = seq(min(unqX1)-dx1,max(unqX1)+dx1,length.out = grid.size)
+  x.seq2 = seq(min(unqX2)-dx2,max(unqX2)+dx2,length.out = grid.size)
+  
+  y.seq1 = matrix(NA,nrow=grid.size,ncol=n.save)
+  y.seq2 = matrix(NA,nrow=grid.size,ncol=n.save)
+  for (i in 1:grid.size){
+    y.seq1[i,] = as.vector(posterior$la_1)+as.vector((1-posterior$la_1))/(1+10^(as.vector(posterior$slope_1)*(x.seq1[i]-as.vector(posterior$log10_ec50_1))))
+    y.seq2[i,] = as.vector(posterior$la_2)+as.vector((1-posterior$la_2))/(1+10^(as.vector(posterior$slope_2)*(x.seq2[i]-as.vector(posterior$log10_ec50_2))))
+  }
+  df1 = data.frame(
+    x = x.seq1,
+    mean = apply(y.seq1,1,mean),
+    median = apply(y.seq1,1,median),
+    lower = apply(y.seq1,1,quantile, probs=0.025),
+    upper = apply(y.seq1,1,quantile, probs=0.975)
+  )
+  df2 = data.frame(
+    x = x.seq2,
+    mean = apply(y.seq2,1,mean),
+    median = apply(y.seq2,1,median),
+    lower = apply(y.seq2,1,quantile, probs=0.025),
+    upper = apply(y.seq2,1,quantile, probs=0.975)
+  )
   
   # #################################
   # ## We include a 3d-plot option ##
@@ -103,14 +140,21 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     fig = fig %>% add_surface(cmin=0,cmax=1)
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
                             type = "scatter3d", mode = "markers",
-                            marker = list(size=5,color="black",symbol=104))
-    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(0,min(combination$y)),max(1,max(combination$y))),
+                            marker = list(size=3,color="black",symbol=104),name = "Observed")
+    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
                                                    title="% Viability"),
-                                      xaxis = list(title=x$data$drug_names[1]),
-                                      yaxis = list(title=x$data$drug_names[2])),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Response surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_trace(x = mono1$x, y = (min(unqX2)-mean(diff(unqX2))), z = mono1$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    
     response_3d = fig
-    # 
+    
     
     # Noninteraction
     z_p0 = x$posterior_mean$p0[-1,-1]
@@ -118,74 +162,57 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     fig = fig %>% add_surface(cmin=0,cmax=1)
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
                             type = "scatter3d", mode = "markers",
-                            marker = list(size=5,color="black",symbol=104))
-    fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(min(0,min(combination$y)),max(1,max(combination$y))),
+                            marker = list(size=3,color="black",symbol=104), name = "Observed")
+    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
                                                   title="% Viability"),
-                                      xaxis = list(title=x$data$drug_names[1]),
-                                      yaxis = list(title=x$data$drug_names[2])),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Non-interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
-    
+    fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_trace(x = mono1$x, y = (min(unqX2)-mean(diff(unqX2))), z = mono1$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
     noninter_3d = fig
     
     # Interaction
     z_Delta = x$posterior_mean$Delta[-1,-1]
-    fig = plot_ly()
+    fig = plot_ly(type = "mesh3d")
     fig = fig %>% add_trace(x = unqX1, y = unqX2, z = z_Delta,type = "surface",
                             colorscale = list(c(0,0.5, 1), c("2166AC","EAECCC", "B2182B")),cmin=-1,cmax=1)
+    fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$residuals,
+                            type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="black",symbol=104), name = "y - p0", showlegend = T)
     fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(-1,1),
                                                   title="Interaction"),
-                                      xaxis = list(title=x$data$drug_names[1]),
-                                      yaxis = list(title=x$data$drug_names[2])),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
     inter_3d = fig
-    # 
+
   }
   
   # Plotting monotherapies
   
-  ####################################################################################
-  # Monotherapies
-  ####################################################################################
-  grid.size = 100
-  x.seq1 = seq(min(unqX1)-dx1,max(unqX1)+dx1,length.out = grid.size)
-  x.seq2 = seq(min(unqX2)-dx2,max(unqX2)+dx2,length.out = grid.size)
-  
-  y.seq1 = matrix(NA,nrow=grid.size,ncol=n.save)
-  y.seq2 = matrix(NA,nrow=grid.size,ncol=n.save)
-  for (i in 1:grid.size){
-    y.seq1[i,] = as.vector(posterior$la_1)+as.vector((1-posterior$la_1))/(1+10^(posterior$slope_1*(x.seq1[i]-posterior$ec50_1)))
-    y.seq2[i,] = as.vector(posterior$la_2)+as.vector((1-posterior$la_2))/(1+10^(posterior$slope_2*(x.seq2[i]-posterior$ec50_2)))
-  }
-  df1 = data.frame(
-    x = x.seq1,
-    mean = apply(y.seq1,1,mean),
-    lower = apply(y.seq1,1,quantile, probs=0.025),
-    upper = apply(y.seq1,1,quantile, probs=0.975)
-  )
-  df2 = data.frame(
-    x = x.seq2,
-    mean = apply(y.seq2,1,mean),
-    lower = apply(y.seq2,1,quantile, probs=0.025),
-    upper = apply(y.seq2,1,quantile, probs=0.975)
-  )
-  
   p1 = ggplot(data = df1, mapping = aes(x, mean)) +
     geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
     geom_point(data = mono1, mapping = aes(x,y), na.rm = T) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
     ylim(min(-0.5,min(mono1$y)),max(1.5,max(mono1$y))) +
-    labs(x = bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")"), y = "% Viability",
-         title = "Monotherapy drug 1",
-         subtitle = paste0(x$data$experiment_ID,": ", x$data$drug_names[1]))+
+    labs(x = bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")"), y = "% Viability",
+         title = paste("Monotherapy:",x$data$drug_names[1]),
+         subtitle = paste0(x$data$experiment_ID)) +
     scale_x_continuous(labels = math_format(10^.x))
-  
   
   p2 = ggplot(data = df2, mapping = aes(x, mean)) + 
     geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
     geom_point(data = mono2, mapping = aes(x,y), na.rm = T) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
     ylim(min(-0.5,min(mono2$y)),max(1.5,max(mono2$y))) +
-    labs(x = bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")"), y = "% Viability",
-         title = "Monotherapy drug 2",
-         subtitle = paste0(x$data$experiment_ID,": ", x$data$drug_names[2]))+
+    labs(x = bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")"), y = "% Viability",
+         title = paste("Monotherapy:",x$data$drug_names[2]),
+         subtitle = paste0(x$data$experiment_ID)) +
     scale_x_continuous(labels = math_format(10^.x))
   
   
@@ -213,26 +240,35 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   p3 = ggplot(data = df, aes(x = x1, y = x2, z = f)) +
     geom_contour_filled(breaks = breaks, show.legend = T, 
                         colour="dark grey", size=.5, linetype = "dashed") +
+    geom_point(aes(x = x1, y = x2),combination, color = "black", alpha = 0.1, size = 2,
+               shape = 4) +
     scale_fill_manual(palette=viridis::viridis, values=breaklabel(10,breaks),
                       name="% Viability", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
+    xlab(bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")")) +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 1, x = -Inf, y = mono2$x, color = 'black') +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 1, x = mono1$x, y = -Inf, color = 'black') +
+    coord_cartesian(clip = 'off') +
     labs(title = "Response surface",
         subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2]))
-    
-    
   
+  # Noninteraction
   p4 = ggplot(data = df, aes(x = x1, y = x2, z = p0)) +
     geom_contour_filled(breaks = breaks, show.legend = T, 
                         colour="dark grey", size=.5, linetype = "dashed") +
+    geom_point(aes(x = x1, y = x2),combination, color = "black", alpha = 0.1, size = 2,
+               shape = 4) +
     scale_fill_manual(palette=viridis::viridis, values=breaklabel(10,breaks),
                       name="% Viability", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
+    xlab(bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")")) +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 2, x = -Inf, y = mono2$x, color = 'black') +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 2, x = mono1$x, y = -Inf, color = 'black') +
+    coord_cartesian(clip = 'off') +
     labs(title = "Non-interaction surface",
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2]))
   
@@ -253,12 +289,17 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   p5 = ggplot(data = df, aes(x = x1, y = x2, z = Delta)) +
     geom_contour_filled(breaks = breaks, show.legend = T, 
                         colour="dark grey", size=.5, linetype = "dashed") +
+    geom_point(aes(x = x1, y = x2),combination, color = "black", alpha = 0.1, size = 2,
+               shape = 4) +
     scale_fill_manual(palette=Delta_col_palette, values=breaklabel(21,breaks),
                       name="Interaction %", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
-    xlab(bquote(log[10](x)~" ("~.(x$data$drug_names[1])~")")) +
-    ylab(bquote(log[10](x)~" ("~.(x$data$drug_names[2])~")")) +
+    xlab(bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")")) +
+    ylab(bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")")) +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 2, x = -Inf, y = mono2$x, color = 'black') +
+    annotate(geom = "point", shape = 4, alpha = 0.1, size = 2, x = mono1$x, y = -Inf, color = 'black') +
+    coord_cartesian(clip = 'off') +
     labs(title = "Interaction surface",
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2])) +
     guides(fill=guide_legend(ncol=1))
@@ -343,6 +384,19 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     }
     grid.arrange(p1,p2,nrow=2) # Monotherapies
     dev.off()
+    
+    # 3D plots
+    if (plot3D){
+      # Response
+      file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Response3D.html",sep = "_"))
+      htmlwidgets::saveWidget(as_widget(response_3d),file.name)
+      # Non-interaction
+      file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"NonInteraction3D.html",sep = "_"))
+      htmlwidgets::saveWidget(as_widget(noninter_3d),file.name)
+      # Interaction
+      file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Interaction3D.html",sep = "_"))
+      htmlwidgets::saveWidget(as_widget(inter_3d),file.name)
+    }
     # DSS scores
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"DSS",sep = "_"))
     if (plotdevice == "pdf"){

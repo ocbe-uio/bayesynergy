@@ -8,6 +8,7 @@ An R package for Bayesian semi-parametric modelling of in-vitro drug combination
 This package rewrites and extends the functionalities of the [synergysplines](https://github.com/ocbe-uio/synergysplines) package, offering significant computational gains and other fixes. More information [here](https://github.com/ocbe-uio/bayesynergy/issues/2#issuecomment-718553824).
 
 ## Updates
+- 01-12-20: Updated to version 2.2, added additional plotting functions for the synergyscreen() function, added a heteroscedastic setting for the noise term, + some minor improvements overall.
 - 14-10-20: Updated to version 2.1, removed Gibbs sampler, should now compile easier on Windows systems
 - 27-08-20: Updated to version 2.0, now running on Stan!
 - 03-03-20: Added support for missing values!

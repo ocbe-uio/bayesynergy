@@ -16,6 +16,8 @@ data {
   real x1[n1];                                            // Concentrations of drug 1
   real x2[n2];                                            // Concentrations of drug 2
   int est_la;                                             // Boolean, estimating lower-asymptotes?
+  int heteroscedastic;                                    // Boolean, are we assuming heteroscedastic measurement error?
+  real lambda;                                            // Real, standard deviation ratio between positive and negative controls
   int kernel;                                             // Indicator, which kernel are we using?
   int nu_matern;                                          // Specification of nu parameter for matern kernel
   int est_alpha;                                          // Are we estimating alpha for RQ kernel?
@@ -49,8 +51,10 @@ transformed data{
     // For Non-Interaction
     real<lower=0,upper=1> la_1[est_la ? 1 : 0];
     real<lower=0,upper=1> la_2[est_la ? 1 : 0];
-    real ec50_1;
-    real ec50_2;
+    real log10_ec50_1;
+    real log10_ec50_2;
+    real theta_1;
+    real theta_2;
     real<lower=0> slope_1;
     real<lower=0> slope_2;
     
@@ -66,9 +70,10 @@ transformed data{
     
     
     // Variances
-    real<lower=0> s2;
-    real<lower=0> s2_ec50_1;
-    real<lower=0> s2_ec50_2;
+    real<lower=0> s;
+    real<lower=0> s2_log10_ec50_1;
+    real<lower=0> s2_log10_ec50_2;
+    
   }
   transformed parameters{
     matrix<lower=0, upper=1>[n2,n1] p0;        // Non-interaction
@@ -133,9 +138,9 @@ transformed data{
         }
         
         for (j in 1:n1){
-          p01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-ec50_1)));
+          p01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-log10_ec50_1)));
           for (i in 1:n2){
-            p02[i] = la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-ec50_2)));
+            p02[i] = la_2_param+(1-la_2_param)/(1+10^(slope_2*(x2[i]-log10_ec50_2)));
             p0[i,j] = p01[j]*p02[i];
             B[i,j] = GP[i,j];
             Delta[i,j] = -p0[i,j]/(1+exp(b1*B[i,j]+log(p0[i,j]/(1-p0[i,j]))))+(1-p0[i,j])/(1+exp(-b2*B[i,j]-log(p0[i,j]/(1-p0[i,j]))));
@@ -146,24 +151,29 @@ transformed data{
   model {
     // Constructing the dose-response over the full (n2+1)x(n1+1) grid
     matrix[n2+1,n1+1] f;                      // The dose-response function
+    vector[N] fobs;                           // The observed dose response
+    vector[N] noise;                          // The observation noise
     f[1,1] = 1;                               // At (-Inf,-Inf) dose response is one
     f[1,2:(n1+1)] = p01;                      // At (.,0) dose response is mono1
     f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
     f[2:(n2+1),2:(n1+1)] = p0 + Delta;        // At the interior, dose response is non-interaction + interaction
     
     // Variances
-    s2 ~ inv_gamma(3,0.5);
-    s2_ec50_1 ~ inv_gamma(3,2);
-    s2_ec50_2 ~ inv_gamma(3,2);
+    s ~ inv_gamma(5,1);
+    // s ~ cauchy(0,.5);
+    s2_log10_ec50_1 ~ inv_gamma(3,2);
+    s2_log10_ec50_2 ~ inv_gamma(3,2);
 
     
     // Monotherapies
-    la_1 ~ beta(0.5,0.5);
-    la_2 ~ beta(0.5,0.5);
+    la_1 ~ beta(1,1.25);
+    la_2 ~ beta(1,1.25);
     slope_1 ~ gamma(1,1);
     slope_2 ~ gamma(1,1);
-    ec50_1 ~ normal(0,sqrt(s2_ec50_1));
-    ec50_2 ~ normal(0,sqrt(s2_ec50_2));
+    theta_1 ~ normal(0,1);
+    theta_2 ~ normal(0,1);
+    log10_ec50_1 ~ normal(theta_1,sqrt(s2_log10_ec50_1));
+    log10_ec50_2 ~ normal(theta_2,sqrt(s2_log10_ec50_2));
     
     // Interaction transformation
     b1 ~ gamma(1,1);
@@ -178,20 +188,35 @@ transformed data{
     to_vector(z) ~ std_normal();
     
     // Response
-    y ~ normal(to_vector(f)[ii_obs],sqrt(s2));
+    fobs = to_vector(f)[ii_obs];
+    noise = s*sqrt((fobs+lambda));
+    if (heteroscedastic){
+      y ~ normal(fobs,noise);
+    } else{
+      y ~ normal(fobs,s);
+    }
     
   }
   generated quantities {
+    real ec50_1;
+    real ec50_2;
     vector[N] CPO = rep_vector(0,N);            // Model diagnostics
-    real dss_1 = 0;                                 // DSS drug 1
-    real dss_2 = 0;                                 // DSS drug 2
+    real dss_1 = 0;                             // DSS drug 1
+    real dss_2 = 0;                             // DSS drug 2
     real rVUS_p = 0;                            // Overall efficacy
     real rVUS_Delta = 0;                        // Overall interaction
     real rVUS_syn = 0;                          // Synergy
     real rVUS_ant = 0;                          // Antagonism
+    // Log-versions of the surface integrals -- for standardization
+    real log_rVUS_p;                        // Overall efficacy
+    real log_rVUS_Delta;                    // Overall interaction
+    real log_rVUS_syn;                      // Synergy
+    real log_rVUS_ant;                      // Antagonism
     {
       matrix[n2+1,n1+1] f;                      // The dose-response function
       matrix[n2,n1] f_interior;                 // The dose-response function interior
+      vector[N] fobs;                           // The observed dose response
+      vector[N] noise;                          // The observation noise
       real la_1_param;                          // lower_asymptotes
       real la_2_param;                          // lower_asymptotes
       real eps = 0.05;                          // for integration limits
@@ -209,9 +234,19 @@ transformed data{
       f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
       f[2:(n2+1),2:(n1+1)] = p0 + Delta;        // At the interior, dose response is non-interaction + interaction
       f_interior[1:n2,1:n1] = 1 - (p0 + Delta);  // At the interior, dose response is non-interaction + interaction
+      // Calculating CPO
+      fobs = to_vector(f)[ii_obs];
+      noise = s*sqrt((fobs+lambda));
       for (i in 1:N){
-        CPO[i] = exp(-normal_lpdf(y[i] | to_vector(f)[ii_obs[i]],sqrt(s2)));
+        if (heteroscedastic){
+          CPO[i] = exp(-normal_lpdf(y[i] | fobs[i], noise[i]));
+        } else {
+          CPO[i] = exp(-normal_lpdf(y[i] | fobs[i], s));
+        }
       }
+      // Getting EC50 on original scale
+      ec50_1 = 10^log10_ec50_1;
+      ec50_2 = 10^log10_ec50_2;
       // Calculating DSS
       if (est_la){
           la_1_param = la_1[1];
@@ -222,16 +257,16 @@ transformed data{
         }
       
      if ((1 - eps/2) > la_1_param){
-        c11 = (1/slope_1)*log10((1-la_1_param)/((1 - eps/2)-la_1_param)-1)+ec50_1;
+        c11 = (1/slope_1)*log10((1-la_1_param)/((1 - eps/2)-la_1_param)-1)+log10_ec50_1;
         if (c11 < max(x1)){
-          dss_1 = (c12-c11)+(la_1_param-1)/slope_1*(log10(1+10^(slope_1*(c12-ec50_1))) - log10(1+10^(slope_1*(c11-ec50_1))));
+          dss_1 = (c12-c11)+(la_1_param-1)/slope_1*(log10(1+10^(slope_1*(c12-log10_ec50_1))) - log10(1+10^(slope_1*(c11-log10_ec50_1))));
           dss_1 = 100 * (1-dss_1/((1-eps/2)*(c12-c11))); // Normalizing
         } else {dss_1 = uniform_rng(1e-16,1e-15);}
       } else {dss_1 = uniform_rng(1e-16,1e-15);}
       if ((1 - eps/2) > la_2_param){
-        c21 = (1/slope_2)*log10((1-la_2_param)/((1 - eps/2)-la_2_param)-1)+ec50_2;
+        c21 = (1/slope_2)*log10((1-la_2_param)/((1 - eps/2)-la_2_param)-1)+log10_ec50_2;
         if (c21 < max(x2)){
-          dss_2 = (c22-c21)+(la_2_param-1)/slope_2*(log10(1+10^(slope_2*(c22-ec50_2))) - log10(1+10^(slope_2*(c21-ec50_2))));
+          dss_2 = (c22-c21)+(la_2_param-1)/slope_2*(log10(1+10^(slope_2*(c22-log10_ec50_2))) - log10(1+10^(slope_2*(c21-log10_ec50_2))));
           dss_2 = 100 * (1-dss_2/((1-eps/2)*(c22-c21))); // Normalizing
         } else {dss_2 = uniform_rng(1e-16,1e-15);}
       } else {dss_2 = uniform_rng(1e-16,1e-15);}
@@ -264,6 +299,16 @@ transformed data{
        rVUS_Delta = 100 * rVUS_Delta / (((max(x1)-min(x1))*(max(x2)-min(x2)))*fmax(max(p0),max(1-p0)));
        rVUS_syn = 100 * rVUS_syn / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(p0));
        rVUS_ant = 100 * rVUS_ant / (((max(x1)-min(x1))*(max(x2)-min(x2)))*max(1-p0));
+       // Fixing zero valued integrals
+       if (rVUS_p == 0){rVUS_p = uniform_rng(1e-16,1e-15);}
+       if (rVUS_Delta == 0){rVUS_Delta = uniform_rng(1e-16,1e-15);}
+       if (rVUS_syn == 0){rVUS_syn = uniform_rng(1e-16,1e-15);}
+       if (rVUS_ant == 0){rVUS_ant = uniform_rng(1e-16,1e-15);}
+       // Then log-versions
+       log_rVUS_p = log(rVUS_p);
+       log_rVUS_Delta = log(rVUS_Delta);
+       log_rVUS_syn = log(rVUS_syn);
+       log_rVUS_ant = log(rVUS_ant);
     }
   }
   

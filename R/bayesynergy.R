@@ -8,8 +8,10 @@
 #' @param type integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).
 #' @param drug_names vector of size 2; names of the drugs utilized for the experiment.
 #' @param experiment_ID character; identifier of experiment, typically name of cell Line.
-#' @param log10_conc logical; if TRUE concentrations are assumed given on the log10 scale.
+#' @param units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' @param lower_asymptotes logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.
+#' @param heteroscedastic logical; if TRUE, the model will assume heteroscedastic measurement error.
+#' @param lambda numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.
 #' @param nu numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)
 #' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
 #' @param control list; passed on to the stan sampler, e.g. for setting adapt_delta.
@@ -38,8 +40,8 @@
 #' @export
 
 
-bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, log10_conc = FALSE, 
-                        lower_asymptotes = T, nu = 1.5 , method = "sampling",
+bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, units = NULL,
+                        lower_asymptotes = F, heteroscedastic = T, lambda = 0.005, nu = 1.5 , method = "sampling",
                         control = list(), ...){
   
   # Keep original data
@@ -70,11 +72,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   if (ncol(as.matrix(x))!=2){
     stop("Dimension mismatch! Argument 'x' should be a matrix with two columns containing drug concentrations.")
   }
-  if (log10_conc){
-    x = 10^x
-  }
   if (min(x[,1]) > 0 | min(x[,2]) > 0){
-    stop("Missing monotherapy data! Make sure 'x' contains zero concentrations (-Inf if given on log10 scale).")
+    stop("Missing monotherapy data! Make sure 'x' contains zero concentrations")
   }
   
   # GP models need adapt_delta > 0.9, so set that here
@@ -89,6 +88,9 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   }
   if (is.null(experiment_ID)){
     experiment_ID = "Experiment"
+  }
+  if (is.null(units)){
+    units = c("conc.","conc.")
   }
   
   # Setting up data for the sampler
@@ -131,7 +133,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   
   # Setting up data for Stan
   stan_data = list(n1=length(unqX1), n2=length(unqX2), x1=unqX1, x2=unqX2, nrep=nrep,
-       y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes)
+       y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes,
+       heteroscedastic = heteroscedastic, lambda = lambda)
   if (type == 1){ # Splines
     stan_data$n_knots1 = n_knots1
     stan_data$n_knots2 = n_knots2
@@ -174,17 +177,17 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
     },
     if (method=="sampling"){
       if (type==1){
-        fit = rstan::sampling(stanmodels$splines,stan_data, pars=c("z"),include=F, control = control, ...)
+        fit = rstan::sampling(stanmodels$splines,stan_data, control = control, ...)
       }
       else {
-        fit = rstan::sampling(stanmodels$gp_grid,stan_data, pars=c("z"),include=F, control = control, ...)
+        fit = rstan::sampling(stanmodels$gp_grid,stan_data, control = control, ...)
       }
     } else if (method == "vb"){
       if (type==1){
-        fit = rstan::vb(stanmodels$splines,stan_data, pars=c("z"),include=F, ...)
+        fit = rstan::vb(stanmodels$splines,stan_data, ...)
       }
       else {
-        fit = rstan::vb(stanmodels$gp_grid,stan_data, pars=c("z"),include=F, ...)
+        fit = rstan::vb(stanmodels$gp_grid,stan_data, ...)
       }
     } else if (method == "opt"){
       if (type==1){
@@ -203,7 +206,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   LPML = -sum(log(apply(posterior$CPO,2,sum)/n.save))
   coef_names = names(posterior)
   # Remove those we don't care about
-  coef_names = setdiff(coef_names,c("p0","p01","p02","Delta","CPO","lp__"))
+  coef_names = setdiff(coef_names,c("z","p0","p01","p02","Delta","CPO","lp__"))
 
   # Surfaces
   # Mean response
@@ -213,8 +216,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   f[,1,2:(length(unqX1)+1)] = posterior$p01
   f[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0+posterior$Delta
   f_mean = apply(f,c(2,3),mean)
-  colnames(f_mean) = round(c(0,10^unqX1),4)
-  rownames(f_mean) = round(c(0,10^unqX2),4)
+  colnames(f_mean) = signif(c(0,10^unqX1),4)
+  rownames(f_mean) = signif(c(0,10^unqX2),4)
   # Mean non-interaction
   p0 = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
   p0[,1,1] = 1
@@ -222,8 +225,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   p0[,1,2:(length(unqX1)+1)] = posterior$p01
   p0[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0
   p0_mean = apply(p0,c(2,3),mean)
-  colnames(p0_mean) = round(c(0,10^unqX1),4)
-  rownames(p0_mean) = round(c(0,10^unqX2),4)
+  colnames(p0_mean) = signif(c(0,10^unqX1),4)
+  rownames(p0_mean) = signif(c(0,10^unqX2),4)
   # Mean interaction
   Delta = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
   Delta[,1,1] = 0
@@ -231,8 +234,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   Delta[,1,2:(length(unqX1)+1)] = 0
   Delta[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$Delta
   Delta_mean = apply(Delta,c(2,3),mean)
-  colnames(Delta_mean) = round(c(0,10^unqX1),4)
-  rownames(Delta_mean) = round(c(0,10^unqX2),4)
+  colnames(Delta_mean) = signif(c(0,10^unqX1),4)
+  rownames(Delta_mean) = signif(c(0,10^unqX2),4)
   
   
   posterior_mean = as.list(rstan::summary(fit,pars=coef_names)$summary[,'mean'])
@@ -240,8 +243,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   posterior_mean$p0 = p0_mean
   posterior_mean$Delta = Delta_mean
   
-  data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID)
-  model = list(type = type, lower_asymptotes = lower_asymptotes, method = method)
+  data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID, units = units, indices = ii_obs)
+  model = list(type = type, lower_asymptotes = lower_asymptotes, method = method, heteroscedastic = heteroscedastic)
   
   # If matern kernel, add value of nu
   if (type==3){
@@ -251,8 +254,13 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, l
   object = list(stanfit = fit, posterior_mean = posterior_mean, 
                 data = data, model = model, returnCode = returnCode,
                 LPML = LPML)
+  # Finally set some diagnostics
+  object$divergent = NA
   if (returnCode){
     object$messages = messages
+    if (method=="sampling"){
+      object$divergent = sum(rstan::get_divergent_iterations(fit))
+    }
   }
   
   class(object) <- "bayesynergy"
