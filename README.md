@@ -1,4 +1,4 @@
-# BayeSyneRgy
+# bayesynergy
 
 An R package for Bayesian semi-parametric modelling of in-vitro drug combination experiments 
 
