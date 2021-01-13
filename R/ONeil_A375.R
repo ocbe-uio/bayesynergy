@@ -1,0 +1,14 @@
+#' A drug combination dataset
+#'
+#' @description  An example dataset from a large drug combination screening experiment, on the A-375 human melanoma cell line.
+#' 
+#' @format A list containing two distinct dataset from the experiment. Each list element is itself a list of two elemnts: a matrix of viability scores, and a matrix of corresponding concentrations. The data was adapted from the data provided by the \code{synergyfinder} R package.
+#' 
+#' @references 
+#' O'Neil J, Benita Y, Feldman I, Chenard M, Roberts B, Liu Y, Li J, Kral A, Lejnine S, Loboda A, Arthur W, Cristescu R, Haines BB, Winter C, Zhang T, Bloecher A, Shumway SD. An Unbiased Oncology Compound Screen to Identify Novel Combination Strategies. Mol Cancer Ther. 2016 Jun;15(6):1155-62. doi: 10.1158/1535-7163.MCT-15-0843. Epub 2016 Mar 16. PMID: 26983881.
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name ONeil_A375
+#' @usage data(ONeil_A375)
+"ONeil_A375"

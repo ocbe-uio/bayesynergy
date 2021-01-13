@@ -7,7 +7,7 @@
 \method{plot}{synergyscreen}(
   x,
   groupbyExperimentID = T,
-  save_plot = FALSE,
+  save_plots = FALSE,
   path = NULL,
   plotdevice = "pdf",
   ...
@@ -18,7 +18,7 @@
 
 \item{groupbyExperimentID}{logical; if TRUE, individual plots are produced per experiment ID.}
 
-\item{save_plot}{logical; if TRUE plots are saved locally.}
+\item{save_plots}{logical; if TRUE plots are saved locally.}
 
 \item{path}{string; path for saving plots, if NULL defaults to work directory.}
 

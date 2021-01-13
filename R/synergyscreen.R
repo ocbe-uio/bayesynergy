@@ -11,7 +11,7 @@
 #' @param path string; path for saving output and plot for each individual experiment.
 #' @param parallel logical; if TRUE, parallel processing is utilized to run the screen.
 #' @param max_cores integer; the maximum number of cores to utilize for the parallel processing.
-#' @param max_retries intereger; the maximum number of retries utilized in model fit.
+#' @param max_retries integer; the maximum number of retries utilized in model fit.
 #' @param plot_params list; parameters to be passed to the plotting function. See \link{plot.bayesynergy} for details.
 #' @param bayesynergy_params list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.
 #'  
@@ -23,14 +23,14 @@
 #' x: \tab matrix of concentrations \cr
 #' drug_names: \tab vector of drug names in the experiment \cr
 #' experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line name.
+#' units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' }
 #' 
-#' @return A list of equal length as \code{experiments}, each element containing
+#' @return A list containing two elements
 #' \tabular{ll}{
-#' summaries \tab posterior summary statistics for variables of the model. \cr
-#' drug_names \tab names of the drugs utilized for the experiment. \cr
-#' experiment_ID \tab identifier of experiment, typically name of cell Line. \cr
-#' fit \tab if requested, the fitted \code{\link[bayesynergy]{bayesynergy}} object.
+#' screenSummary \tab data frame, posterior summary statistics for each experiment. \cr
+#' failed \tab A list containing elements experiments that failed to process. \cr
+#' screenSamples \tab if requested, a list containing the fitted \code{\link[bayesynergy]{bayesynergy}} object for each experiment.
 #' }
 #' 
 #' 
@@ -63,12 +63,21 @@ synergyscreen = function(experiments, return_samples = F,
   if (is.null(path)){
     path <- getwd()
   }
+  
+  # Default max cores
+  if (is.null(max_cores)){
+    max_cores <- min(length(experiments),min(max_cores, parallel::detectCores() - 1))
+  } else { # Overwrite on user input if allowed
+    max_cores = min(max_cores, parallel::detectCores())
+  }
+  
   # Check that path exists, if not create it
   if (!dir.exists(path)){
     dir.create(path)
   }
   # Put dirmark on file path
   path = Sys.glob(path,dirmark = T)
+  
   # Telling the user where things are being saved
   if (save_raw | save_plots){
     print(paste("Saving output at:",path))
@@ -78,8 +87,18 @@ synergyscreen = function(experiments, return_samples = F,
   if (!("control" %in% names(bayesynergy_params))){
     bayesynergy_params$control = list()
   } 
+  # Set default method to vb for computational speed
   if (!("method" %in% names(bayesynergy_params))){
-    bayesynergy_params$method = "sampling"
+    bayesynergy_params$method = "vb"
+  }
+  
+  # Finally, if we are re-running failed experiments
+  rerun = F
+  oldrun = c()
+  if (class(experiments)=="synergyscreen"){
+    oldrun = experiments$screenSummary
+    experiments = experiments$failed
+    rerun = T
   }
   
   # Create container for results
@@ -91,10 +110,8 @@ synergyscreen = function(experiments, return_samples = F,
     if (nzchar(chk) && chk == "TRUE") {
       # use 2 cores in CRAN/Travis/AppVeyor
       max_cores <- 2L
-    } else {
-      # use all cores in devtools::test()
-      max_cores <- min(length(experiments),min(max_cores, parallel::detectCores() - 1))
-    }
+    } 
+    
     print(paste("Using",max_cores,"cores for parallel run on list of size",length(experiments)))
     cl = parallel::makeCluster(max_cores,setup_strategy = "sequential")
     registerDoSNOW(cl)
@@ -103,7 +120,7 @@ synergyscreen = function(experiments, return_samples = F,
     progress <- function(n) setTxtProgressBar(pb, n)
     opts <- list(progress = progress)
     # Running the experiments, in parallel
-    results = foreach (ee=experiments, .combine=list,
+    results = foreach (kk = 1:length(experiments), .combine=list,
                        .maxcombine = length(experiments),
                        .multicombine = T,
                        .options.snow = opts,
@@ -111,7 +128,7 @@ synergyscreen = function(experiments, return_samples = F,
                        .verbose=F,
                        .errorhandling = "pass") %dopar% {
                          # Do the fitting here
-                         data <- ee
+                         data <- experiments[[kk]]
                          # If drug_names or experiment_ID not given
                          if (!("drug_names" %in% names(data))){
                            data$drug_names = c("DrugA","DrugB")
@@ -160,35 +177,36 @@ synergyscreen = function(experiments, return_samples = F,
                              }
                              # Saving plots
                              if (save_plots){
-                               suppressMessages(do.call(plot,c(list(x=fit,save_plot = T, path=path), plot_params)))
+                               suppressMessages(do.call(plot,c(list(x=fit,save_plots = T, path=path), plot_params)))
                              }
                              
                              # Create some summaries
                              summaryStats = rstan::summary(fit$stanfit)$summary
                              synMetrics <- data.frame(
+                               `listID` = kk,
                                `Experiment ID` = data$experiment_ID,
                                `Drug A` = data$drug_names[1],
                                `Drug B` = data$drug_names[2],
-                               # Extract the EC50s for each drug
+                               # Include some summary stats for the experiment
                                `EC50 (Drug A)` = summaryStats["ec50_1","mean"],
                                `EC50 (Drug B)` = summaryStats["ec50_2","mean"],
+                               `DSS (Drug A)` = summaryStats["dss_1","mean"],
+                               `DSS (Drug B)` = summaryStats["dss_2","mean"],
+                               `Synergy (mean)` = summaryStats["rVUS_syn","mean"],
+                               `Synergy (sd)` = summaryStats["rVUS_syn","sd"],
+                               `Antagonism (mean)` = summaryStats["rVUS_ant","mean"],
+                               `Antagonism (sd)` = summaryStats["rVUS_ant","sd"],
+                               `Efficacy (mean)` = summaryStats["rVUS_f","mean"],
+                               `Efficacy (sd)` = summaryStats["rVUS_f","sd"],
+                               `Non-interaction Efficacy (mean)` = summaryStats["rVUS_p0","mean"],
+                               `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
+                               `Interaction (mean)` = summaryStats["rVUS_Delta","mean"],
+                               `Interaction (sd)` = summaryStats["rVUS_Delta","sd"],
                                
-                               # Calculate a standardized synergy score from the mean of the rVUS
-                               `Synergy Score` = (summaryStats["log_rVUS_syn","mean"]/summaryStats["log_rVUS_syn","sd"]),
-                               
-                               # Calculating additional statistics and parameters
-                               `Mean (syn)` = summaryStats["rVUS_syn", "mean"],
-                               `SEM (syn)` = summaryStats["rVUS_syn", "se_mean"],
-                               `SD (syn)` = summaryStats["rVUS_syn", "sd"],
-                               `Mean/SD (syn)` = summaryStats["rVUS_syn", "mean"] / summaryStats["rVUS_syn", "sd"],
-                               `97.5% (syn)` = summaryStats["rVUS_syn", "97.5%"],
-                               
-                               `Antagonism Score` = (summaryStats["log_rVUS_ant","mean"]/summaryStats["log_rVUS_ant","sd"]),
-                               `Mean (ant)` = summaryStats["rVUS_ant", "mean"],
-                               `SEM (ant)` = summaryStats["rVUS_ant", "se_mean"],
-                               `SD (ant)` = summaryStats["rVUS_ant", "sd"],
-                               `Mean/SD (ant)` = summaryStats["rVUS_ant", "mean"] / summaryStats["rVUS_ant", "sd"],
-                               `97.5% (ant)` = summaryStats["rVUS_ant", "97.5%"],
+                               # Calculate standardized scores for comparisons
+                               `Synergy Score` = summaryStats["rVUS_syn","mean"]/summaryStats["rVUS_syn","sd"],
+                               `Antagonism Score` = summaryStats["rVUS_ant","mean"]/summaryStats["rVUS_ant","sd"],
+                               # Finally some information about model fit
                                `s` = summaryStats["s", "mean"],
                                `returnCode` = fit$returnCode,
                                `divergentTransitions` = sum(fit$divergent),
@@ -198,37 +216,45 @@ synergyscreen = function(experiments, return_samples = F,
                              # Create some summaries
                              summaryStats = rstan::summary(fit$stanfit)$summary
                              synMetrics <- data.frame(
+                               `listID` = kk,
                                `Experiment ID` = data$experiment_ID,
                                `Drug A` = data$drug_names[1],
                                `Drug B` = data$drug_names[2],
-                               # Extract the EC50s for each drug
+                               # Include some summary stats for the experiment
                                `EC50 (Drug A)` = NA,
                                `EC50 (Drug B)` = NA,
+                               `DSS (Drug A)` = NA,
+                               `DSS (Drug B)` = NA,
+                               `Synergy (mean)` = NA,
+                               `Synergy (sd)` = NA,
+                               `Antagonism (mean)` = NA,
+                               `Antagonism (sd)` = NA,
+                               `Efficacy (mean)` = NA,
+                               `Efficacy (sd)` = NA,
+                               `Non-interaction Efficacy (mean)` = NA,
+                               `Non-interaction Efficacy (sd)` = NA,
+                               `Interaction (mean)` = NA,
+                               `Interaction (sd)` = NA,
                                
-                               # Calculate a standardized synergy score from the mean of the rVUS
+                               # Calculate standardized scores for comparisons
                                `Synergy Score` = NA,
-                               
-                               # Calculating additional statistics and parameters
-                               `Mean (syn)` = NA,
-                               `SEM (syn)` = NA,
-                               `SD (syn)` = NA,
-                               `Mean/SD (syn)` = NA,
-                               `97.5% (syn)` = NA,
-                               
                                `Antagonism Score` = NA,
-                               `Mean (ant)` = NA,
-                               `SEM (ant)` = NA,
-                               `SD (ant)` = NA,
-                               `Mean/SD (ant)` = NA,
-                               `97.5% (ant)` = NA,
+                               # Finally some information about model fit
                                `s` = NA,
-                               `returnCode` = fit$returnCode,
+                               `returnCode` = 2,
                                `divergentTransitions` = NA,
                                
                                check.names = FALSE, stringsAsFactors = FALSE)
                              
                            }
                          })
+                         
+                         # Garbage collection
+                         dir <- tempdir()
+                         file.names <- list.files(path = dir, pattern="*.csv")
+                         unlink(paste0(dir,"/",file.names))
+                         
+                         # Return
                          if (return_samples & synMetrics[,"returnCode"] != 2){
                            list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID,fit=fit)
                          } else {
@@ -290,35 +316,36 @@ synergyscreen = function(experiments, return_samples = F,
           }
           # Saving plots
           if (save_plots){
-            suppressMessages(do.call(plot,c(list(x=fit,save_plot = T, path=path), plot_params)))
+            suppressMessages(do.call(plot,c(list(x=fit,save_plots = T, path=path), plot_params)))
           }
           
           # Create some summaries
           summaryStats = rstan::summary(fit$stanfit)$summary
           synMetrics <- data.frame(
+            `listID` = i,
             `Experiment ID` = data$experiment_ID,
             `Drug A` = data$drug_names[1],
             `Drug B` = data$drug_names[2],
-            # Extract the EC50s for each drug
+            # Include some summary stats for the experiment
             `EC50 (Drug A)` = summaryStats["ec50_1","mean"],
             `EC50 (Drug B)` = summaryStats["ec50_2","mean"],
+            `DSS (Drug A)` = summaryStats["dss_1","mean"],
+            `DSS (Drug B)` = summaryStats["dss_2","mean"],
+            `Synergy (mean)` = summaryStats["rVUS_syn","mean"],
+            `Synergy (sd)` = summaryStats["rVUS_syn","sd"],
+            `Antagonism (mean)` = summaryStats["rVUS_ant","mean"],
+            `Antagonism (sd)` = summaryStats["rVUS_ant","sd"],
+            `Efficacy (mean)` = summaryStats["rVUS_f","mean"],
+            `Efficacy (sd)` = summaryStats["rVUS_f","sd"],
+            `Non-interaction Efficacy (mean)` = summaryStats["rVUS_p0","mean"],
+            `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
+            `Interaction (mean)` = summaryStats["rVUS_Delta","mean"],
+            `Interaction (sd)` = summaryStats["rVUS_Delta","sd"],
             
-            # Calculate a standardized synergy score from the mean of the rVUS
-            `Synergy Score` = (summaryStats["log_rVUS_syn","mean"]/summaryStats["log_rVUS_syn","sd"]),
-            
-            # Calculating additional statistics and parameters
-            `Mean (syn)` = summaryStats["rVUS_syn", "mean"],
-            `SEM (syn)` = summaryStats["rVUS_syn", "se_mean"],
-            `SD (syn)` = summaryStats["rVUS_syn", "sd"],
-            `Mean/SD (syn)` = summaryStats["rVUS_syn", "mean"] / summaryStats["rVUS_syn", "sd"],
-            `97.5% (syn)` = summaryStats["rVUS_syn", "97.5%"],
-            
-            `Antagonism Score` = (summaryStats["log_rVUS_ant","mean"]/summaryStats["log_rVUS_ant","sd"]),
-            `Mean (ant)` = summaryStats["rVUS_ant", "mean"],
-            `SEM (ant)` = summaryStats["rVUS_ant", "se_mean"],
-            `SD (ant)` = summaryStats["rVUS_ant", "sd"],
-            `Mean/SD (ant)` = summaryStats["rVUS_ant", "mean"] / summaryStats["rVUS_ant", "sd"],
-            `97.5% (ant)` = summaryStats["rVUS_ant", "97.5%"],
+            # Calculate standardized scores for comparisons
+            `Synergy Score` = summaryStats["rVUS_syn","mean"]/summaryStats["rVUS_syn","sd"],
+            `Antagonism Score` = summaryStats["rVUS_ant","mean"]/summaryStats["rVUS_ant","sd"],
+            # Finally some information about model fit
             `s` = summaryStats["s", "mean"],
             `returnCode` = fit$returnCode,
             `divergentTransitions` = sum(fit$divergent),
@@ -328,38 +355,45 @@ synergyscreen = function(experiments, return_samples = F,
           # Create some summaries
           summaryStats = rstan::summary(fit$stanfit)$summary
           synMetrics <- data.frame(
+            `listID` = i,
             `Experiment ID` = data$experiment_ID,
             `Drug A` = data$drug_names[1],
             `Drug B` = data$drug_names[2],
-            # Extract the EC50s for each drug
+            # Include some summary stats for the experiment
             `EC50 (Drug A)` = NA,
             `EC50 (Drug B)` = NA,
+            `DSS (Drug A)` = NA,
+            `DSS (Drug B)` = NA,
+            `Synergy (mean)` = NA,
+            `Synergy (sd)` = NA,
+            `Antagonism (mean)` = NA,
+            `Antagonism (sd)` = NA,
+            `Efficacy (mean)` = NA,
+            `Efficacy (sd)` = NA,
+            `Non-interaction Efficacy (mean)` = NA,
+            `Non-interaction Efficacy (sd)` = NA,
+            `Interaction (mean)` = NA,
+            `Interaction (sd)` = NA,
             
-            # Calculate a standardized synergy score from the mean of the rVUS
+            # Calculate standardized scores for comparisons
             `Synergy Score` = NA,
-            
-            # Calculating additional statistics and parameters
-            `Mean (syn)` = NA,
-            `SEM (syn)` = NA,
-            `SD (syn)` = NA,
-            `Mean/SD (syn)` = NA,
-            `97.5% (syn)` = NA,
-            
             `Antagonism Score` = NA,
-            `Mean (ant)` = NA,
-            `SEM (ant)` = NA,
-            `SD (ant)` = NA,
-            `Mean/SD (ant)` = NA,
-            `97.5% (ant)` = NA,
+            # Finally some information about model fit
             `s` = NA,
-            `returnCode` = fit$returnCode,
+            `returnCode` = 2,
             `divergentTransitions` = NA,
             
             check.names = FALSE, stringsAsFactors = FALSE)
           
         }
       })
+      
+      # Garbage collection
+      dir <- tempdir()
+      file.names <- list.files(path = dir, pattern="*.csv")
+      unlink(paste0(dir,"/",file.names))
     
+      #Return
       if (return_samples){
         results[[i]] = list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID,fit=fit)
       } else {results[[i]] = list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID)}
@@ -374,9 +408,16 @@ synergyscreen = function(experiments, return_samples = F,
     screenSamples = lapply(results, function(x) x$fit)
     toReturn$screenSamples = screenSamples
   }
+  # Set those with too high noise as returnCode 2
+  toReturn$screenSummary[which(toReturn$screenSummary[,"s"] > 1), "returnCode"] = 2
+  
+  # Then remove all with returnCode 2
+  toReturn$screenSummary = toReturn$screenSummary[which(!(toReturn$screenSummary[,"returnCode"] == 2)),]
   
   # Do some checks to see if things converges okay
-  propFailed = mean((toReturn$screenSummary[,"returnCode"]>0))
+  
+  propFailed = mean((toReturn$screenSummary[,"returnCode"]>0),na.rm = T)
+ 
   if (propFailed > 0){
     if (bayesynergy_params$method == "sampling"){
       warning(paste0(round(100*propFailed,digits=2),"% of experiments returned a warning or error -- check these."))
@@ -385,11 +426,23 @@ synergyscreen = function(experiments, return_samples = F,
       warning(paste0(round(100*propFailed,digits=2),"% of experiments returned a warning or error. NOTE: For method = 'vb' this is to be expected"))
     }
   }
-  if (nrow(toReturn$screenSummary) != length(experiments)){
-    diff = length(experiments) - nrow(toReturn$screenSummary)
-    warning(paste(diff," experiments failed to process"))
+  if (sum((toReturn$screenSummary[,"returnCode"]!=2)) != length(experiments)){
+    diff = length(experiments) - sum((toReturn$screenSummary[,"returnCode"]!=2))
+    warning(paste(diff," experiment(s) failed to process"))
   }
-
+  
+  # Pick out failed experiments and put in list
+  failedID = unique(c(setdiff(1:length(experiments),toReturn$screenSummary$`listID`),which(toReturn$screenSummary[,"returnCode"]==2)))
+  failedExperiments = experiments[failedID]
+  if (length(failedID>0)){
+    toReturn$failed = failedExperiments
+  }
+  
+  # Finally, if we are re-running, the new runs are combined with the old
+  if (rerun){
+    toReturn$screenSummary = rbind(oldrun,toReturn$screenSummary)
+  }
+  
   # Returning
   class(toReturn) <- "synergyscreen"
   return(toReturn)

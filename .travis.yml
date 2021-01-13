@@ -1,9 +1,15 @@
 language: r
 r:
   - release
-  - devel
-  - oldrel
 warnings_are_errors: FALSE
+
+env:
+  global:
+    - R_BUILD_ARGS="--no-build-vignettes --no-manual"
+    - R_CHECK_ARGS="--no-build-vignettes --no-manual --timings"  ## do not build vignettes or manual
+    
+r_build_args: --no-build-vignettes --no-manual
+r_check_args: --no-build-vignettes --no-manual --timings
 
 addons:
   apt:

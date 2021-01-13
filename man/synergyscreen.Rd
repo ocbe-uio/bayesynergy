@@ -32,19 +32,18 @@ synergyscreen(
 
 \item{max_cores}{integer; the maximum number of cores to utilize for the parallel processing.}
 
-\item{max_retries}{intereger; the maximum number of retries utilized in model fit.}
+\item{max_retries}{integer; the maximum number of retries utilized in model fit.}
 
 \item{plot_params}{list; parameters to be passed to the plotting function. See \link{plot.bayesynergy} for details.}
 
 \item{bayesynergy_params}{list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.}
 }
 \value{
-A list of equal length as \code{experiments}, each element containing
+A list containing two elements
 \tabular{ll}{
-summaries \tab posterior summary statistics for variables of the model. \cr
-drug_names \tab names of the drugs utilized for the experiment. \cr
-experiment_ID \tab identifier of experiment, typically name of cell Line. \cr
-fit \tab if requested, the fitted \code{\link[bayesynergy]{bayesynergy}} object.
+screenSummary \tab data frame, posterior summary statistics for each experiment. \cr
+failed \tab A list containing elements experiments that failed to process. \cr
+screenSamples \tab if requested, a list containing the fitted \code{\link[bayesynergy]{bayesynergy}} object for each experiment.
 }
 }
 \description{
@@ -57,6 +56,7 @@ y: \tab matrix of viability scores \cr
 x: \tab matrix of concentrations \cr
 drug_names: \tab vector of drug names in the experiment \cr
 experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line name.
+units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 }
 }
 \examples{
