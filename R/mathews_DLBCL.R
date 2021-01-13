@@ -12,5 +12,5 @@
 #' @docType data
 #' @keywords datasets
 #' @name mathews_DLBCL
-#' @usage data("mathews_DLBCL")
-NULL
+#' @usage data(mathews_DLBCL)
+"mathews_DLBCL"

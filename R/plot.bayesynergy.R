@@ -4,7 +4,7 @@
 #' 
 #' @param x An object of class \code{bayesynergy}, the result of \code{\link{bayesynergy}}.
 #' @param plot3D logical; if TRUE, interactive 3D surface plots of dose response function are displayed.
-#' @param save_plot logical; if TRUE plots are saved locally.
+#' @param save_plots logical; if TRUE plots are saved locally.
 #' @param path string; path for saving plots, if NULL defaults to work directory.
 #' @param plotdevice string; device for saving plots locally, must be 'pdf' or 'png'
 #' @param ... further arguments passed on to device for plotting, useful for setting width and height of saved plots.
@@ -14,12 +14,14 @@
 #' 
 #' 
 #' @examples 
+#' \dontrun{
 #' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
 #' fit <- bayesynergy(y_mat,x_mat)
 #' plot(fit)
+#' }
 #' 
 #' @importFrom ggplot2 ggplot aes geom_smooth geom_point ylim xlim labs scale_x_continuous stat_contour_filled geom_contour_filled scale_fill_manual scale_y_continuous scale_y_discrete xlab ylab scale_fill_viridis_c guides guide_legend geom_hline annotate coord_cartesian
 #' @importFrom ggridges geom_density_ridges_gradient theme_ridges
@@ -34,7 +36,7 @@
 #' @export 
 
 
-plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plotdevice = "pdf", ...){
+plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plotdevice = "pdf", ...){
   
   # Check for valid plotdevice
   if (!(plotdevice %in% c("pdf","png"))){
@@ -142,9 +144,9 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                             type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="black",symbol=104),name = "Observed")
     fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
-                                                   title="% Viability"),
-                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
-                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                                                   title="% Viability",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Response surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
     fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
     fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
@@ -152,6 +154,14 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
     fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_response[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_response[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
     
     response_3d = fig
     
@@ -164,9 +174,9 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                             type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="black",symbol=104), name = "Observed")
     fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
-                                                  title="% Viability"),
-                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
-                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                                                  title="% Viability",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Non-interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
     fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
     fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
@@ -174,6 +184,14 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
     fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_p0[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_p0[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
     noninter_3d = fig
     
     # Interaction
@@ -183,12 +201,20 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
                             colorscale = list(c(0,0.5, 1), c("2166AC","EAECCC", "B2182B")),cmin=-1,cmax=1)
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$residuals,
                             type = "scatter3d", mode = "markers",
-                            marker = list(size=3,color="black",symbol=104), name = "y - p0", showlegend = T)
+                            marker = list(size=3,color="black",symbol=104), name = "y - p<sub>0</sub>", showlegend = T)
     fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(-1,1),
-                                                  title="Interaction"),
-                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
-                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                                                  title="Interaction",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_Delta[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_Delta[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
     inter_3d = fig
 
   }
@@ -326,11 +352,11 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
   
   # Combination scores
   df = data.frame(
-    rVUS = c(posterior$rVUS_p, posterior$rVUS_Delta,
+    rVUS = c(posterior$rVUS_f, posterior$rVUS_p0,
              posterior$rVUS_syn, posterior$rVUS_ant),
-    idx = factor(c(rep('rVUS_p',n.save),rep('rVUS_Delta',n.save),
+    idx = factor(c(rep('rVUS_f',n.save),rep('rVUS_p0',n.save),
                       rep('rVUS_syn',n.save),rep('rVUS_ant',n.save)),
-                 levels = c('rVUS_p','rVUS_Delta','rVUS_syn','rVUS_ant'))
+                 levels = c('rVUS_f','rVUS_p0','rVUS_syn','rVUS_ant'))
   )
   
   p7 = ggplot(df, aes(x = rVUS, y = idx, fill = stat(x))) +
@@ -343,13 +369,13 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     scale_y_discrete(limits = unique(rev(df$idx)), 
                      labels=c(expression(paste("Antagonism (",rVUS(Delta^"+"),")")),
                               expression(paste("Synergy (",rVUS(Delta^"-"),")")),
-                              expression(paste("Overall Interaction (",rVUS(paste("|", Delta, "|")),")")),
-                              expression(paste("Overall Efficacy (",rVUS,")")))) +
+                              expression(paste("Non-interaction efficacy (",rVUS(paste(p[0])),")")),
+                              expression(paste("Overall efficacy (",rVUS(f),")")))) +
                      # labels=c("Antagonism","Synergy","Overall Interaction","Overall Efficacy")) +
     theme_ridges(font_size = 13, grid = FALSE)
   
   
-  if (!save_plot){
+  if (!save_plots){
     # Displaying the plots
     grid.arrange(p1,p2,nrow=2) # Monotherapies
     readline("Press key for next plot")
@@ -389,13 +415,13 @@ plot.bayesynergy <- function(x, plot3D = T, save_plot = FALSE, path = NULL, plot
     if (plot3D){
       # Response
       file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Response3D.html",sep = "_"))
-      htmlwidgets::saveWidget(as_widget(response_3d),file.name)
+      htmlwidgets::saveWidget(as_widget(response_3d),file = file.name, libdir = "lib", selfcontained = F)
       # Non-interaction
       file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"NonInteraction3D.html",sep = "_"))
-      htmlwidgets::saveWidget(as_widget(noninter_3d),file.name)
+      htmlwidgets::saveWidget(as_widget(noninter_3d),file = file.name, libdir = "lib", selfcontained = F)
       # Interaction
       file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Interaction3D.html",sep = "_"))
-      htmlwidgets::saveWidget(as_widget(inter_3d),file.name)
+      htmlwidgets::saveWidget(as_widget(inter_3d),file = file.name, libdir = "lib", selfcontained = F)
     }
     # DSS scores
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"DSS",sep = "_"))

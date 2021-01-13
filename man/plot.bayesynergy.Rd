@@ -4,14 +4,14 @@
 \alias{plot.bayesynergy}
 \title{Plot function for a bayesynergy object}
 \usage{
-\method{plot}{bayesynergy}(x, plot3D = T, save_plot = FALSE, path = NULL, plotdevice = "pdf", ...)
+\method{plot}{bayesynergy}(x, plot3D = T, save_plots = FALSE, path = NULL, plotdevice = "pdf", ...)
 }
 \arguments{
 \item{x}{An object of class \code{bayesynergy}, the result of \code{\link{bayesynergy}}.}
 
 \item{plot3D}{logical; if TRUE, interactive 3D surface plots of dose response function are displayed.}
 
-\item{save_plot}{logical; if TRUE plots are saved locally.}
+\item{save_plots}{logical; if TRUE plots are saved locally.}
 
 \item{path}{string; path for saving plots, if NULL defaults to work directory.}
 
@@ -26,11 +26,13 @@ A function for plotting synergy surfaces and summary statistics of a \code{bayes
 This function extends \code{plot} to draw response and interaction surfaces of the fitted model. Both three-dimensional interactive plots, and two-dimensional contour plots can be displayed.
 }
 \examples{
+\dontrun{
 library(bayesynergy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
 fit <- bayesynergy(y_mat,x_mat)
 plot(fit)
+}
 
 }

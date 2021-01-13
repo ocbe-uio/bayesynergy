@@ -63,10 +63,12 @@ LPML \tab numeric; The log pseudo-marginal likelihood of the fitted model. \cr
 The function \code{bayesynergy} is the main function of the bayesynergy package. It will fit a Bayesian semi-parametric model for in-vitro drug combination experiments to estimate synergistic and antagonistic effects.
 }
 \examples{
+\dontrun{
 library(bayesynergy)
 data("mathews_DLBCL")
 y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
 fit <- bayesynergy(y_mat,x_mat)
+}
 
 }

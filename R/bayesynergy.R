@@ -29,11 +29,13 @@
 #' 
 #' 
 #' @examples 
+#' \dontrun{
 #' library(bayesynergy)
 #' data("mathews_DLBCL")
 #' y_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[1]]
 #' x_mat <- mathews_DLBCL$`ispinesib + ibrutinib`[[2]]
 #' fit <- bayesynergy(y_mat,x_mat)
+#' }
 #' 
 #' @importFrom utils modifyList
 #' 

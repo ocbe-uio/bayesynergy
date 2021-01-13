@@ -1,0 +1,465 @@
+---
+title: "bayesynergy: flexible Bayesian modelling of synergistic interaction effects
+  in in-vitro drug combination experiments"
+author: "Leiv Rønneberg"
+date: "12/1/2021"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+bibliography: references.bib
+vignette: >
+  %\VignetteIndexEntry{bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{css, echo=FALSE}
+pre {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 100px;
+}
+```
+---
+
+
+# Introduction
+
+The `bayesynergy` R package implements a Bayesian semi-parametric regression model for estimating the dose-response function of in-vitro drug combination experiments. The Bayesian framework offers full uncertainty quantification of the dose response function and any derived summary statistics, as well as natural handling of replicates and missing data. The Bayesian model is implemented in Stan (@Stan_2020), taking advantage of the efficient 'No U-Turn Sampler' as well as variational Bayes for quick approximations of the true posterior.
+
+The package is further equipped with plotting functions for summarizing a drug response experiment, parallel processing for large drug combination screen, as well as plotting tools for summarizing and comparing these.
+
+# The model
+
+The **dose-response** function $f:\boldsymbol{x} \to (0,1)$, maps drug concentrations $\boldsymbol{x}$ to a measure of cell viability -- zero corresponding to all cells being dead after treatment, one corresponding to all cells still alive. In drug-combination screens, it is common to assume that the dose-response function can be broken down as
+$$
+f(\boldsymbol{x}) = p_0(\boldsymbol{x})+\Delta(\boldsymbol{x}),
+$$
+where $p_0(\boldsymbol{x})$ encodes a *non-interaction assumption*, and $\Delta(\boldsymbol{x})$ captures the residual interaction effect.
+
+## Non-interaction
+The non-interaction assumption, $p_0(\boldsymbol{x})$, captures what can be reasonably assumed about a joint drug effect, given estimates of the drugs' individual effect. We assume a Bliss style independence assumption, where we first assume that the individual drugs' dose-response function takes the form of a log-logistic curve
+$$
+h_i(x_i|l,s,m) = l + \frac{1-l}{1+10^{s(x_i-m)}},
+$$
+where $l$ is the lower-asymptote, $s$ the slope, and $m$ the drugs 'EC-50' on the $\log_{10}$ scale. The Bliss assumption then amounts to a probabilistic independence assumption, where 
+$$
+p_0(\boldsymbol{x}) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2).
+$$
+We call it probabilistic, because we can interpret the individual dose-response curves, $h_i()$ as probability of cell survival. Defining the events
+$$
+\begin{align}
+A_i & = \text{A cell survives drug A at concentration $x_{1i}$} \\
+B_j & = \text{A cell survives drug B at concentration $x_{2j}$} \\
+C_{ij} & = \text{A cell survives both drugs at concentration $\boldsymbol{x}=(x_{1i},x_{2j})$},
+\end{align}
+$$
+the corresponding probabilities become
+$$
+p_0(\boldsymbol{x}) = P(C_{ij}) = P(A_i)P(B_i) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2).
+$$
+
+
+## Interaction
+
+The interaction component, $\Delta(\boldsymbol{x})$, captures whatever joint effect of the drugs that is not captured by the non-interaction assumption. If two drugs more effective together than would be expected by $p_0$, we call this *synergy*, and it corresponds to $\Delta <0$. The opposite effect is deemed *antagonism*.
+
+Because the interaction landscape can be complicated, with multiple local peaks and valleys, we model this term non-parametrically using a Gaussian Process prior (GP). To ensure that the resulting dose-response function only takes values in the interval $(0,1)$, we push the GP through a transformation function $g()$. That is
+$$
+z(\boldsymbol{x}) \sim \mathcal{GP}(0,\kappa(\boldsymbol{x},\boldsymbol{x}')) \\
+\Delta(\boldsymbol{x}) = g(z(\boldsymbol{x})),
+$$
+where the transformation function looks like
+$$
+g(z(\boldsymbol{x})) = \frac{-p_0(\boldsymbol{x})}{1+\exp\left\{b_1z(\boldsymbol{x})+\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} + \frac{1-p_0(\boldsymbol{x})}{1+\exp\left\{-b_2z(\boldsymbol{x})-\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}}.
+$$
+In addition to ensuring the proper bounds for the dose-response function, this transformation has the feature that $g(0)=0$, which corresponds to an *a priori* assumption that
+$$
+\mathbb{E}\left[f(\boldsymbol{x}) | p_0(\boldsymbol{x})\right] = p_0(\boldsymbol{x}).
+$$
+That is, we make our non-interaction assumption into a formal prior expectation on the dose-response function. This achieves two things, (1) a slightly conservative model that needs to be convinced that interaction effects are present, and (2) no built-in bias of interaction in the prior structure.
+
+The covariance function $\kappa(\boldsymbol{x},\boldsymbol{x}')$ can be given multiple specifications, including a squared exponential, Matérn, and Rational Quadratic covariance functions. By default, we use a Matérn covariance with the $\nu$ parameter set to 3/2 yielding
+$$
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2\left(1+\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right)\exp\left\{-\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right\}.
+$$
+Finally, by utilizing the natural grid structure of the drug concentrations, we can write the kernel function as
+$$
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2 \kappa(x_1,x_1')\kappa(x_2,x_2'),
+$$
+which induces a Kronecker product structure on the final covariance matrix. Following the implementation detailed in @Flaxman_2015, this greatly improves the computational efficiency of the model.
+
+## The observation model
+Given the above formulation for the dose-response function $f$, we assume that we (noisy) have access to observations from it. In particular we assume that given concentration points $\boldsymbol{x}_1,\ldots,\boldsymbol{x}_n$ we have observations $y_1,\ldots,y_n$ where
+$$
+y_i = f(\boldsymbol{x}_i) + \epsilon_i,
+$$
+where we assume that the errors $\epsilon_i$ are normally distributed with mean zero. For the variance of the observational errors, by default we model these in a heteroscedastic faschion as
+$$
+\text{Var}\left[\epsilon_i\right] = \sigma^2(f(\boldsymbol{x}_i)+\lambda),
+$$
+where $\lambda$ is set to a small value to handle the case when $f = 0$, but there is still some residual noise. In a typical setup where cell viability is calculated through a normalization to positive and negative controls, lambda can be empirically set as
+$$
+\lambda = \frac{\sigma^2_{-}}{\sigma^2_{+}},
+$$
+where $\sigma^2_{+}$ and $\sigma^2_{-}$ denotes the variance of positive and negative controls, respectively.
+
+We choose a heteroscedastic model by default, because in cell viability assays, the observations are normalized in relation to positive and negative controls. The positive controls typically have much lower variance compared to the negative controls, which translates to viability measures closer to zero being more precisely measured. We also allow homoscedastic noise as an option.
+
+## Full model specification
+The full model specification, with all default prior distributions look like
+$$
+y_i \sim \mathcal{N}\left(f(\boldsymbol{x}_i),\sigma^2(f(\boldsymbol{x}_i)+\lambda)\right), \ i = 1,\ldots, n \\
+\sigma^2 \sim \text{Inv-Ga}\left(5,1\right), \ \lambda = 0.005. \\
+f(\boldsymbol{x}_i) = p_0(\boldsymbol{x}_i)+\Delta(\boldsymbol{x}_i) \mathbb{I}(\boldsymbol{x}_i>0) \\
+p_0(\boldsymbol{x}) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2). \\
+l_j = \text{Beta}(1,1.25), \ s_i \sim \text{Gamma}(1,1), \ m_i \sim \mathcal{N}(\theta_i,\sigma_{m_i}^2), \ j = 1,2 \\
+\theta_i \sim \mathcal{N}(0,1), \ \sigma_{m_i}^2 \sim \text{Inv-Ga}\left(3,2\right), \ j = 1,2 \\
+\Delta(\boldsymbol{x}) = g(z(\boldsymbol{x})), \ z(\boldsymbol{x}) \sim \mathcal{GP}(0,\kappa(\boldsymbol{x},\boldsymbol{x}')) \\
+g(z(\boldsymbol{x})) = \frac{-p_0(\boldsymbol{x})}{1+\exp\left\{b_1z(\boldsymbol{x})+\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} + \frac{1-p_0(\boldsymbol{x})}{1+\exp\left\{-b_2z(\boldsymbol{x})-\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} \\
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2\left(1+\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right)\exp\left\{-\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right\}, \\
+\sigma_f^2 \sim \text{log}-\mathcal{N}(0,1), \ \ell \sim \text{Inv-Ga}(5,5) \\
+b_j \sim \text{Gamma}(1,1), \ j = 1,2.
+$$
+Note that some of these specifications can be altered. For example, by default we do not estimate the lower asymptotes, but keep these fixed at zero. While this might be unreasonable for the drugs in question, it only really makes a differene if we are predicting outside the observed dose range. For estimation purposes, we usually find that our posterior functions give a good fit to the data, even without this parameter. When these parameters are included in the model, they are given a boundary avoiding prior. As the lower asymptotes approaches 1, the slope and EC50 parameters become difficult to estimate, or even non-identifiable -- the $\text{Beta}(1,1.25)$ prior ensures minimal prior weight on values too close to 1 to avoid this problem.
+
+In the model specification above, the interaction term is multiplied with an indicator function $\mathbb{I}(\boldsymbol{x}>0)$ taking the value 1 if and only if all elements in $\boldsymbol{x}$ is strictly larger than zero. This makes sure that we don't allow for interaction when one of the drugs is at zero concentration.
+
+
+## Summary measures
+From the posterior dose-response function $f | \mathbf{y}$, we derive a number of summary statistics concerning efficacy, synergy and antagonism.
+
+### Monotherapy summaries
+For the monotherapy curves, we produce estimates of the drug sensitivity score (DSS) of each drug by the integral
+
+$$
+DSS_0 = \int_a^b 1-h_j(x) \text{d}x,
+$$ 
+where $a=h_j^{-1}(1-\epsilon/2)$ and $b=\max(x_{1j})$. That is, the integral is taken from where $h_j$ crosses an 'activation threshold' $1-\epsilon/2$, to the maximum value measured of the drug concentration in the screen. The activation treshold $\epsilon$ is set to 5%. This value is further standardized by the total volume available for drug efficacy,
+$$
+DSS = \frac{DSS_0}{(1-\epsilon/2)(b-a)}
+$$
+From here, values can be further standardized as in @Yadav_2014
+
+### Combination summaries
+To summarise the total drug-response function, we utilise the measures developed in @Cremaschi_2019. As with the DSS scores, we calculate the area above the response function, and denote this the 'residual volume under the surface' or **rVUS** -- as it's the volume left over from integrating the surface.
+
+In general, the integral looks like
+
+$$
+rVUS_0(f) = \int_a^b \int_c^d 1-f(x) \ \text{d}x
+$$
+where the integrals are taken over the observed drug range, i.e. $a = \min (x_1)$, $b = \max (x_1)$, $c = \min (x_2)$, $d = \max (x_2)$.
+
+From here, we further standardise the rVUS scores to the total volume available for efficacy
+
+$$
+rVUS(f) = \frac{rVUS_0(f)}{(b-a)(d-c)}.
+$$
+The model calculates $rVUS$ for the dose-response function $f$, giving a measure of combined efficacy. In addition, we calculate $rVUS(p_0)$, the non-interaction efficacy; $rVUS(\Delta)$ the interaction efficacy. For the interaction term $\Delta$, we also compute $rVUS(\Delta^{-})$ and $rVUS(\Delta^{+})$ for synergy and antagonism, where $\Delta^{+}$ and $\Delta^{-}$ denotes the positive and negative parts of $\Delta$, respectively. That is,
+
+$$
+\Delta^{+}(\mathbf{x}) = \max(0,\Delta(\mathbf{x})) \\
+\Delta^{-}(\mathbf{x}) = \max(0,-\Delta(\mathbf{x})).
+$$
+
+### Summarising large screens
+
+When running screens with a large amount of drug combinations, it is helpful to have a normalised measures for comparing synergy across experiments. The $rVUS$ scores defined above are already standardized to their drug concentration range, but to compare across experiments, we also standardize with respect to the uncertainty in the model. To do this, we calculate a **synergy score** by normalizing the log of $rVUS(\Delta^{-})$ with respect to its standard deviation.
+$$
+\text{Synergy score} = \frac{\text{mean}(\log(rVUS(\Delta^{-})))}{\text{sd}(\log(rVUS(\Delta^{-})))}.
+$$
+
+# A simple example -- a single experiment
+In the R package, we've attached two example datasets from a large drug combination screening experiment on diffuse large B-cell lymphoma. We'll use these to show some simple use cases of the main functions and how to interpret the results.
+
+Let's load in the first example and have a look at it
+
+```{r load_example}
+library(bayesynergy)
+data("mathews_DLBCL")
+y = mathews_DLBCL[[1]][[1]]
+x = mathews_DLBCL[[1]][[2]]
+head(cbind(y,x))
+```
+We see that the the measured viability scores are stored in the vector `y`, while `x` is a matrix with two columns giving the corresponding concentrations where the viability scores were read off.
+
+Fitting the regression model is simple enough, and can be done on default settings simply by running the folling code (where we add the names of the drugs involved, as well as the concentration units for prettier plots).
+
+```{r regular_fit, cache = F, warning = FALSE}
+fit = bayesynergy(y,x, drug_names = c("ibrutinib", "ispinesib"),
+                  units = c("nM","nM"))
+```
+
+The resulting model can be summarised by running
+
+```{r summary_fit}
+summary(fit)
+```
+Which gives posterior summaries of the parameters of the model. In addition, the model calculates summary statistics of the monotherapy curves and the dose-response surface including drug sensitivity scores (DSS) for the two drugs in question, as well as the residual volumes under the surface (rVUS) that capture the notion of overall efficacy (`rVUS_f`), overall interaction (`rVUS_Delta`), overall synergy (`rVUS_syn`) and overall interaction (`rVUS_ant`). 
+
+As indicated, the total combined drug efficacy is around 80% (`rVUS_f`), of which around 70 percentage points can be attributed to $p_0$ (`rVUS_p0`), leaving room for 10 percentage points worth of synergy (`rVUS_syn`). We can also note that the model is fairly certain of this effect, with a 95% credible interval given as (`r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["rVUS_syn",4],3)`, `r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["rVUS_syn",6],3)`).
+
+
+We can also create plots by simply running
+
+```{r regular_plots, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7), fig.show="hold", results="hide", fig.keep ="all"}
+plot(fit, plot3D = F)
+```   
+which produces monotherapy curves, monotherapy summary statistics, 2D contour plots of the dose-response function $f$, the non-interaction assumption $p_0$ and the interaction $\Delta$. The last plot displays the $rVUS$ scores as discussed previously, with corresponding uncertainty.
+
+
+The package can also generate 3D interactive plots by setting `plot3D = T`. These are displayed as following using the plotly library.
+
+```{r 3dresponse, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+x = fit
+# Creating some stuff needed for plots
+library(plotly)
+
+  posterior = rstan::extract(x$stanfit)
+  n.save = length(posterior$lp__)
+  # We add lower-asymptote parameters if these are not estimated
+  if (!x$model$lower_asymptotes){
+    posterior$la_1 = rep(0,n.save)
+    posterior$la_2 = rep(0,n.save)
+  }
+  unqX1 = log10(sort(unique(x$data$x[,1])))[-1] # Removing -Inf here
+  unqX2 = log10(sort(unique(x$data$x[,2])))[-1] # Removing -Inf here
+  dx1 = mean(diff(unqX1))
+  dx2 = mean(diff(unqX2))
+  nrep = ncol(as.matrix(x$data$y))
+  # Need to find coordinates for the observed variables in this new coordinate system
+  Xgrid = expand.grid(unqX1,unqX2)
+  Xgrid = Xgrid[order(Xgrid["Var1"],Xgrid["Var2"]),]
+  
+  mono1 = data.frame(
+    x = rep(log10(x$data$x[which((x$data$x[,2]==0) & (x$data$x[,1] != 0)),1]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,2]==0) & (x$data$x[,1] != 0)),])
+  )
+  # Remove NA here
+  idx = !is.na(mono1$y)
+  mono1 = mono1[idx,]
+  
+  mono2 = data.frame(
+    x = rep(log10(x$data$x[which((x$data$x[,1]==0) & (x$data$x[,2] != 0)),2]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]==0) & (x$data$x[,2] != 0)),])
+  )
+  # Remove NA here
+  idx = !is.na(mono2$y)
+  mono2 = mono2[idx,]
+  
+  # Pull out indices we want
+  ii = x$data$indices[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0))]
+  # Also define residuals here
+  
+  combination = data.frame(
+    x1 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),1]),nrep),
+    x2 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),2]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]),
+    f = 0,
+    p0 = 0,
+    Delta = 0,
+    residuals = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]) - as.vector(x$posterior_mean$p0)[ii]
+  ) 
+  # Remove NA here
+  idx = !is.na(combination$y)
+  combination = combination[idx,]
+  
+  ####################################################################################
+  # Monotherapies
+  ####################################################################################
+  grid.size = 100
+  x.seq1 = seq(min(unqX1)-dx1,max(unqX1)+dx1,length.out = grid.size)
+  x.seq2 = seq(min(unqX2)-dx2,max(unqX2)+dx2,length.out = grid.size)
+  
+  y.seq1 = matrix(NA,nrow=grid.size,ncol=n.save)
+  y.seq2 = matrix(NA,nrow=grid.size,ncol=n.save)
+  for (i in 1:grid.size){
+    y.seq1[i,] = as.vector(posterior$la_1)+as.vector((1-posterior$la_1))/(1+10^(as.vector(posterior$slope_1)*(x.seq1[i]-as.vector(posterior$log10_ec50_1))))
+    y.seq2[i,] = as.vector(posterior$la_2)+as.vector((1-posterior$la_2))/(1+10^(as.vector(posterior$slope_2)*(x.seq2[i]-as.vector(posterior$log10_ec50_2))))
+  }
+  df1 = data.frame(
+    x = x.seq1,
+    mean = apply(y.seq1,1,mean),
+    median = apply(y.seq1,1,median),
+    lower = apply(y.seq1,1,quantile, probs=0.025),
+    upper = apply(y.seq1,1,quantile, probs=0.975)
+  )
+  df2 = data.frame(
+    x = x.seq2,
+    mean = apply(y.seq2,1,mean),
+    median = apply(y.seq2,1,median),
+    lower = apply(y.seq2,1,quantile, probs=0.025),
+    upper = apply(y.seq2,1,quantile, probs=0.975)
+  )
+
+  # Response
+    z_response = x$posterior_mean$f[-1,-1]
+    fig = plot_ly(x = unqX1, y = unqX2, z = z_response)
+    fig = fig %>% add_surface(cmin=0,cmax=1)
+    fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
+                            type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="black",symbol=104),name = "Observed")
+    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
+                                                   title="% Viability",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                         title = paste("Response surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_trace(x = mono1$x, y = (min(unqX2)-mean(diff(unqX2))), z = mono1$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_response[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_response[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    
+    response_3d = fig
+    
+    response_3d
+  
+  
+```   
+
+```{r 3dnoninteraction, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+
+z_p0 = x$posterior_mean$p0[-1,-1]
+    fig = plot_ly(x = unqX1, y = unqX2, z = z_p0)
+    fig = fig %>% add_surface(cmin=0,cmax=1)
+    fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
+                            type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="black",symbol=104), name = "Observed")
+    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
+                                                  title="% Viability",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                         title = paste("Non-interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_trace(x = mono1$x, y = (min(unqX2)-mean(diff(unqX2))), z = mono1$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_p0[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_p0[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    noninter_3d = fig
+    noninter_3d
+
+```
+
+```{r 3dinteraction, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+
+# Interaction
+    z_Delta = x$posterior_mean$Delta[-1,-1]
+    fig = plot_ly(type = "mesh3d")
+    fig = fig %>% add_trace(x = unqX1, y = unqX2, z = z_Delta,type = "surface",
+                            colorscale = list(c(0,0.5, 1), c("2166AC","EAECCC", "B2182B")),cmin=-1,cmax=1)
+    fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$residuals,
+                            type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="black",symbol=104), name = "y - p<sub>0</sub>", showlegend = T)
+    fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(-1,1),
+                                                  title="Interaction",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                         title = paste("Interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_Delta[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_Delta[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    inter_3d = fig
+    inter_3d
+
+```
+
+# A simple example -- a synergy screen
+The `synergyscreen` provides a work flow for data from big drug combination screens, where multiple drugs are tested in combination on multiple cell lines. It takes as input a list of experiments, each entry being a list containing the necessary elements needed for a call to the main regression function `bayesynergy`.
+
+Included in the package is the result of a `synergyscreen` run of 583 drug combinations on the A-375 human melanoma cell line from @ONeil_2016. The `synergyscreen` object is a list with two entries, a dataframe with parameter estimates from each experiment, and a list entitled `failed` -- containing experiments that either failed completely to process, or had an unsatisfactory fit.
+
+```{r synergyscreen_load, cache = F}
+data("ONeil_A375")
+length(ONeil_A375$failed)
+```
+We see that the dataset has two experiments that failed to process, during an initial run of `synergyscreen`. There's a multitude of reasons why an experiment might fail to process, it could be an input error, initialization problems or problems with the parallel processing. 
+
+The entries of `failed` are themselves lists, each containing the necessary information to process through the `bayesynergy` function 
+
+```{r synergyscreen_load2, cache = F}
+failed_experiment = ONeil_A375$failed[[1]]
+names(failed_experiment)
+```
+
+``` {r, echo = F}
+colnames(failed_experiment$x) = failed_experiment$drug_names
+colnames(failed_experiment$y) = "viability"
+```
+
+``` {r}
+head(cbind(failed_experiment$y,failed_experiment$x))
+```
+
+We can rerun experiments that failed to process, by simply passing the returned `synergyscreen` object back into the function. Note that we turn of the default options of saving each fit and plotting everything, and set `method = "vb"` indicating we use variational inference to fit the model.
+
+``` {r synergyscreen_fit, cache = F, warning = F}
+fit_screen = synergyscreen(ONeil_A375, save_raw = F, save_plots = F, parallel = F, 
+                           bayesynergy_params = list(method = "vb"))
+```
+
+
+We can also plot the result of the screen:
+```{r synergyscreen, cache = F, warning = FALSE, message = FALSE, fig.dim = c(8,8), fig.show="hold", results="hide", fig.keep ="all"}
+plot(fit_screen)
+```
+
+# Diagnosing errors and warnings
+Sometimes, the `bayesynergy` function may return with a warning. Ideally, we don't want any warnings at all, and they should be examined closely, as posterior samples could be unreliable. Usually, the warning will tell the user how to fix the problem at hand, e.g. by running the chains for longer (set `iter` higher), or setting `adapt_delta` higher. See [https://mc-stan.org/misc/warnings.html] for some general tips.
+
+## Divergent Transitions
+
+Most commonly, the sampler might complain about divergent transitions. The warning will typically look like this:
+```
+## Warning: There were 2316 divergent transitions after warmup. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.
+```
+This is indicative of a posterior geometry that is tricky to explore. In the case where there is only a few divergent transitions, the usual trick is to set `adapt_delta` to a higher value, i.e. larger than 0.9 which is the default. This can be done through the `control` option in the `bayesynergy` call:
+```{r, eval = F}
+fit = bayesynergy(y, x, control = list(adapt_delta = 0.99))
+```
+
+However, the case above, where there are 2316 divergent transitions, is indicative of a misspecified model. In my experience, this can happen for a few reasons.
+
+* Estimating 'flat' monotherapies
+  + i.e. when the parameter $l$ is close to one. This can have the effect of making the other monotherapy parameters unidentifiable.
+  + this can usually be alleviated by setting `lower_asymptotes = FALSE` (which is default) in the call. Unless one is specifically interested in these parameters, there are no reason to estimate them -- the model fit will be still be good without them.
+* Estimating $l$ in the heteroscedastic model
+  + the model often struggles in this setting, particularly if there are none or few replicates.
+  + choose a homoscedastic model instead.
+* 'Wrong' $\lambda$ value
+  + sometimes setting $\lambda$ much lower than the initial setting can help with a better fit. This is particularly true if viability scores close to zero (or negative) are truncated or set to exactly zero.
+
+
+# References
