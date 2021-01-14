@@ -154,7 +154,7 @@ To summarise the total drug-response function, we utilise the measures developed
 In general, the integral looks like
 
 $$
-rVUS_0(f) = \int_a^b \int_c^d 1-f(x) \ \text{d}x
+rVUS_0(f) = \int_a^b \int_c^d 1-f(\mathbf{x}) \ \text{d}\mathbf{x}
 $$
 where the integrals are taken over the observed drug range, i.e. $a = \min (x_1)$, $b = \max (x_1)$, $c = \min (x_2)$, $d = \max (x_2)$.
 
