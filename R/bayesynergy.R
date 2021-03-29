@@ -11,6 +11,7 @@
 #' @param units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' @param lower_asymptotes logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.
 #' @param heteroscedastic logical; if TRUE, the model will assume heteroscedastic measurement error.
+#' @param noise_hypers vector of size 2; hyperparameters for the Inv-Gamma prior on the observation noise. The user can set these to reflect the variance in negative controls.
 #' @param lambda numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.
 #' @param nu numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)
 #' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
