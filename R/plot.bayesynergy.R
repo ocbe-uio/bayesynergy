@@ -29,7 +29,7 @@
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
 #' @importFrom inlmisc GetColors
-#' @importFrom grDevices dev.off pdf png
+#' @importFrom grDevices dev.off cairo_pdf png
 #' @importFrom stats quantile
 #' @importFrom htmlwidgets saveWidget 
 #' 
@@ -403,7 +403,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Monotherapies",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)
@@ -427,7 +427,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"DSS",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)
@@ -438,7 +438,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Response",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)
@@ -449,7 +449,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"NonInteraction",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)
@@ -460,7 +460,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Interaction",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)
@@ -471,7 +471,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"rVUS",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      pdf(file=file.name.pdf, ...)
+      cairo_pdf(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
       png(filename = file.name.png, ...)

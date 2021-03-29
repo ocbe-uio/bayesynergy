@@ -17,6 +17,7 @@ data {
   real x2[n2];                                            // Concentrations of drug 2
   int est_la;                                             // Boolean, estimating lower-asymptotes?
   int heteroscedastic;                                    // Boolean, are we assuming heteroscedastic measurement error?
+  vector[2] noise_hypers;                                 // Hyperparameters for observation noise
   real lambda;                                            // Real, standard deviation ratio between positive and negative controls
   int kernel;                                             // Indicator, which kernel are we using?
   int nu_matern;                                          // Specification of nu parameter for matern kernel
@@ -159,7 +160,7 @@ transformed data{
     f[2:(n2+1),2:(n1+1)] = p0 + Delta;        // At the interior, dose response is non-interaction + interaction
     
     // Variances
-    s ~ inv_gamma(5,1);
+    s ~ inv_gamma(noise_hypers[1],noise_hypers[2]);
     // s ~ cauchy(0,.5);
     s2_log10_ec50_1 ~ inv_gamma(3,2);
     s2_log10_ec50_2 ~ inv_gamma(3,2);
@@ -176,12 +177,14 @@ transformed data{
     log10_ec50_2 ~ normal(theta_2,sqrt(s2_log10_ec50_2));
     
     // Interaction transformation
-    b1 ~ gamma(1,1);
-    b2 ~ gamma(1,1);
+    // b1 ~ gamma(1,1);
+    // b2 ~ gamma(1,1);
+    b1 ~ normal(1,0.1);
+    b2 ~ normal(1,0.1);
     
     // Interaction
     ell ~ inv_gamma(5,5);
-    sigma_f ~ lognormal(0,1);
+    sigma_f ~ lognormal(1,1);
     if (est_alpha){
       alpha ~ gamma(1,1);
     }

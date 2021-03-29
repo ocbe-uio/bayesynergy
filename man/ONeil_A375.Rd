@@ -5,7 +5,7 @@
 \alias{ONeil_A375}
 \title{A drug combination dataset}
 \format{
-A list containing two distinct dataset from the experiment. Each list element is itself a list of two elemnts: a matrix of viability scores, and a matrix of corresponding concentrations. The data was adapted from the data provided by the \code{synergyfinder} R package.
+A \link{synergyscreen} object, consisting of an initial run of 583 drug combinations on the A-375 human melanoma cell line. Contains a dataframe of summary statistics for 581 experiments, and a list containing two experiments that failed to process.
 }
 \usage{
 data(ONeil_A375)

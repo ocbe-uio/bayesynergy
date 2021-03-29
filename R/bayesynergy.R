@@ -43,7 +43,7 @@
 
 
 bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, units = NULL,
-                        lower_asymptotes = F, heteroscedastic = T, lambda = 0.005, nu = 1.5 , method = "sampling",
+                        lower_asymptotes = T, heteroscedastic = T, noise_hypers = c(5,1), lambda = 0.005, nu = 1.5 , method = "sampling",
                         control = list(), ...){
   
   # Keep original data
@@ -136,7 +136,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   # Setting up data for Stan
   stan_data = list(n1=length(unqX1), n2=length(unqX2), x1=unqX1, x2=unqX2, nrep=nrep,
        y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes,
-       heteroscedastic = heteroscedastic, lambda = lambda)
+       heteroscedastic = heteroscedastic, noise_hypers = noise_hypers, lambda = lambda)
   if (type == 1){ # Splines
     stan_data$n_knots1 = n_knots1
     stan_data$n_knots2 = n_knots2
