@@ -39,6 +39,8 @@ bayesynergy(
 
 \item{heteroscedastic}{logical; if TRUE, the model will assume heteroscedastic measurement error.}
 
+\item{noise_hypers}{vector of size 2; hyperparameters for the Inv-Gamma prior on the observation noise. The user can set these to reflect the variance in negative controls.}
+
 \item{lambda}{numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.}
 
 \item{nu}{numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)}

@@ -111,6 +111,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   lower_breaks[1] = -l
   upper_breaks[4] = l
   breaks = as.numeric(c(lower_breaks,upper_breaks))
+  breaks = sort(jitter(breaks))
   Delta_col_palette <- inlmisc::GetColors(scheme = "BuRd")
   
   
@@ -216,7 +217,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
                       breaks = round(breaks,2),
                       values = scales::rescale(breaks),
                       limits = round(max(abs(synscores3$mean_int))*c(-1,1),2),
-                      guide = guide_coloursteps(even.steps = F,
+                      guide = guide_coloursteps(even.steps = T,
                                                 show.limits = T,
                                                 title = "Interaction",
                                                 barheight = unit(3.3, "in"))) + 
@@ -312,6 +313,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
         lower_breaks[1] = -l
         upper_breaks[4] = l
         breaks = as.numeric(c(lower_breaks,upper_breaks))
+        breaks = sort(jitter(breaks))
         
         
         # Center
@@ -368,7 +370,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
                             breaks = round(breaks,2),
                             values = scales::rescale(breaks),
                             limits = round(max(abs(synscores3$mean_int))*c(-1,1),2),
-                            guide = guide_coloursteps(even.steps = F,
+                            guide = guide_coloursteps(even.steps = T,
                                                       show.limits = T,
                                                       title = "Interaction",
                                                       barheight = unit(3.3, "in"))) +
