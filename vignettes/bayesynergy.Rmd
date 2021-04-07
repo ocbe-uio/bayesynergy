@@ -2,7 +2,7 @@
 title: "bayesynergy: flexible Bayesian modelling of synergistic interaction effects
   in in-vitro drug combination experiments"
 author: "Leiv Rønneberg"
-date: "29/3/2021"
+date: "7/4/2021"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -112,6 +112,18 @@ $$
 where $\sigma^2_{+}$ and $\sigma^2_{-}$ denotes the variance of positive and negative controls, respectively.
 
 We choose a heteroscedastic model by default, because in cell viability assays, the observations are normalized in relation to positive and negative controls. The positive controls typically have much lower variance compared to the negative controls, which translates to viability measures closer to zero being more precisely measured. We also allow homoscedastic noise as an option.
+
+### Including controls
+
+The positive and negative controls essentially control the signal-to-noise ratio in cell viability assays. If the user has access to these, they can be included in the model to help calibrate the posterior distribution -- particularly in the case with zero replicates.
+
+Let $\xi^-_k$ and $\xi^+_l$ denote the negative and positive controls for $k=1,\ldots,n_-$ and $l=1,\ldots,n_+$. These measurements are raw readings from the plate and are used to calculate cell viability. For an additional well, treated with drug concentration $\mathbf{x}_i$, we denote the raw output by $\xi_i$, and calculate cell viability for this well by the formula:
+$$
+y_i = \frac{\xi_i-\tilde{\xi^+}}{\tilde{\xi^-}-\tilde{\xi^+}},
+$$
+where $\tilde{\xi^-}$ and $\tilde{\xi^+}$ denotes some measure of centrality of the positive and negative controls, typically the mean or median.
+
+The controls can themselves be passed through this function and converted to \% viability. From the variances of these normalized controls, $\lambda$ can be set as indicated above. And the negative controls can be added directly into the algorithm. Negative controls represents unhindered cell growth, and can be thought of as samples from the dose-response function $f(\mathbf{x})$ at concentration $\mathbf{x}=(0,0)$. These can then be added directly to the $\texttt{bayesynergy}$ function in the same way as regular observations.
 
 ## Full model specification
 The full model specification, with all default prior distributions look like
