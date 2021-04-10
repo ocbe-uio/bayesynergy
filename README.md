@@ -1,4 +1,4 @@
-# bayesynergy
+# bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments
 
 An R package for Bayesian semi-parametric modelling of in-vitro drug combination experiments 
 
@@ -10,6 +10,8 @@ An R package for Bayesian semi-parametric modelling of in-vitro drug combination
 <img src="https://github.com/ocbe-uio/bayesynergy/blob/master/doc/workflow.png?raw=true" width="90%" align="center"></img>
 
 The bayesynergy package implements a Bayesian semi-parametric model for the drug combination experiment. Through an efficient implementation in [Stan](https://mc-stan.org/users/interfaces/rstan), the model provides estimates of the full dose-response surface with uncertainty quantification. From the posterior dose-response function, estimates of synergy and antagonism are derived that better reflect the true uncertainty in these estimates. The model handles incomplete and messy datasets, naturally includes replicates, and contains parallel processing for large drug combination screens.
+
+[biorxiv paper](https://www.biorxiv.org/content/10.1101/2021.04.07.438787v1)
 
 ## Installation
 Prior to installing the package, please install [RStan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started), and make sure you can run the models there. Stan requires the configuration of a C++ toolchain, which can be tricky on some systems. 
