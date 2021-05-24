@@ -82,7 +82,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   
   # Average across all experimentID
   synscoresAverage <- synscores %>% dplyr::group_by(`Drug A`,`Drug B`) %>% dplyr::summarise(`mean_syn` = mean(`Synergy Score`,na.rm=T),
-                                                                                            `max_syn` = max(`Synergy (mean)`,na.rm = T),
+                                                                                            `max_syn` = min(`Synergy (mean)`,na.rm = T),
                                                                                             `mad_syn` = mad(`Synergy (mean)`,na.rm=T),
                                                                                             `mean_ant` = mean(`Antagonism Score`,na.rm=T),
                                                                                             `max_ant` = max(`Antagonism (mean)`,na.rm=T),
@@ -97,7 +97,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   
   
   # For p3, we also create the mirror-image so that we can display both antagonism and synergy
-  synscores3AB <- synscoresAverage %>% mutate(`mean_int` = -`mean_syn`)
+  synscores3AB <- synscoresAverage %>% mutate(`mean_int` = `mean_syn`)
   synscores3BA <- synscoresAverage %>% mutate(`DrugATMP` = `Drug A`,
                                              `Drug A` = `Drug B`,
                                              `Drug B` = `DrugATMP`,
@@ -105,7 +105,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   synscores3 = rbind(synscores3AB,synscores3BA)
   
   # Breaks set by quantiles
-  lower_breaks = quantile(-synscores3$mean_syn,probs=c(0,0.01,0.1,0.25))
+  lower_breaks = quantile(synscores3$mean_syn,probs=c(0,0.01,0.1,0.25))
   upper_breaks = sort(quantile(synscores3$mean_ant,probs=1-c(0,0.01,0.1,0.25)))
   l = max(abs(c(min(lower_breaks)-0.1,max(upper_breaks)+0.1)))
   lower_breaks[1] = -l
@@ -129,14 +129,14 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   synscoresAverage$mad_int[is.na(synscoresAverage$mad_int)] = 0
   
   # Labeling top hits
-  synscoresAverage <- synscoresAverage %>% mutate(`Quantile` = ifelse(in_quantile(as.numeric(`mean_syn`))|in_quantile(as.numeric(`mean_ant`)),
+  synscoresAverage <- synscoresAverage %>% mutate(`Quantile` = ifelse(in_quantile(as.numeric(-`mean_syn`))|in_quantile(as.numeric(`mean_ant`)),
                                                         paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA))) %>%
     # Duplicate top hit annotations are removed. All annotations for transposed drug treatments are removed, only the annotation for one drug pair is kept.
     mutate(`Quantile` = ifelse(!duplicated(t(apply(synscoresAverage[c("Drug A", "Drug B")], 1, sort))) == TRUE, `Quantile`, as.character(NA)))
   # Duplicate experimentID and drug pairs are also removed (there shouldn't be any)
   synscoresAverage <- synscoresAverage[!duplicated(t(apply(synscoresAverage[c("Drug A", "Drug B")], 1, sort))),]
   # Adding a colour variable for p1
-  synscoresAverage <- synscoresAverage %>% mutate(`colp1` = ifelse(`mean_ant` > `mean_syn`,`max_ant`,-`max_syn`))
+  synscoresAverage <- synscoresAverage %>% mutate(`colp1` = ifelse(`mean_ant` > -`mean_syn`,`max_ant`,`max_syn`))
   
   
   
@@ -149,7 +149,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
     scale_size_continuous(range = c(1.5, 4), name = "MAD") +
     scale_fill_gradientn(colours = c("#2066AC","#F7F7F7","#B2182B"),
                            values = scales::rescale(c(min(synscoresAverage$colp1,na.rm=T),max(synscoresAverage$colp1,na.rm=T))),
-                           name = "Interaction",
+                           name = "Max\nInteraction",
                            limits = max(abs(synscoresAverage$colp1))*c(-1,1)) +
                            # limits = c(min(0,min(synscoresAverage$colp1,na.rm=T)),max(0,max(synscoresAverage$colp1,na.rm=T)))) +
     geom_text_repel(aes(label = Quantile), color="black",  na.rm = TRUE, force = 1, direction = "both", point.padding = unit(1.2, "lines"), box.padding = unit(0.2, "lines"),
@@ -174,14 +174,14 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   
   
   # Label top hits for each experiment ID
-  synscores <- synscores %>% dplyr::group_by(`Experiment ID`) %>% mutate(`Quantile` = ifelse(in_quantile(as.numeric(`Synergy (mean)`),n=1), paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA)))
+  synscores <- synscores %>% dplyr::group_by(`Experiment ID`) %>% mutate(`Quantile` = ifelse(in_quantile(-as.numeric(`Synergy (mean)`),n=1), paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA)))
   
   
   # Plotting only synergy for each experiment ID
   p2 = ggplot(synscores, aes(x = factor(`Experiment ID`), y = `Synergy (mean)`, fill = `Synergy (mean)`)) +
     geom_point(aes(size = `Synergy (sd)`), colour="gray",pch = 21, alpha = 0.8) +
     scale_size_continuous(trans = 'reverse', range = c(1, 4), name = "Std. dev") +
-    scale_fill_gradientn(colours = c("#F7F7F7","#2066AC"),
+    scale_fill_gradientn(colours = c("#2066AC","#F7F7F7"),
                          values = scales::rescale(c(min(synscores$`Synergy (mean)`,na.rm = T),max(synscores$`Synergy (mean)`,na.rm=T))),
                          limits = c(min(synscores$`Synergy (mean)`,na.rm = T),max(synscores$`Synergy (mean)`,na.rm=T))) +
     scale_y_continuous(name = "Synergy") +
@@ -200,27 +200,32 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
   ###########################################################################################
   ####### PLOT 3: Synergy & Antagonism pairwise 
   ###########################################################################################
-
+  # Function for labels in p3
+  label_Function = function(x) {
+    tmp = c()
+    # print(x)
+    if (length(x) == 2){
+      tmp = c("","Top 1%\nantagonistic")
+    }
+    else if (length(x) == 6){
+      tmp = c("Top 1%\nsynergistic","Top 10%\nsynergistic","Top 25%\nsynergistic","\nNo effect","Top 25%\nantagonistic","Top 10%\nantagonistic")
+    }
+    return(tmp)}
   
   # Some minor changes here
   p3 = ggplot(data = synscores3, mapping = aes_string(x = "`Drug B`", y = "`Drug A`", fill = "`mean_int`")) +
     geom_point(color = "gray", shape = 21, aes_string(size = "`mad_int`")) +
     scale_size_continuous(range = c(2, 5), name = "MAD") +
-    # scale_fill_stepsn(breaks = round(as.numeric(breaks),2),
-    #                   colours = Delta_col_palette(n=length(breaks)+1),
-    #                   name = "Interaction",
-    #                   limits = max(abs(synscores3$mean_int))*c(-1,1),
-    #                   values = scales::rescale(c(min(synscores3$mean_int,na.rm=T),max(synscores3$mean_int,na.rm=T))),
-    #                   guide = guide_colorsteps(even.steps = F,
-    #                                            show_limits = F, barheight = unit(2.3, "in"))) +
     scale_fill_stepsn(colors = Delta_col_palette(n=length(breaks)-1),
-                      breaks = round(breaks,2),
+                      breaks = breaks,
                       values = scales::rescale(breaks),
-                      limits = round(max(abs(synscores3$mean_int))*c(-1,1),2),
+                      limits = c(breaks[1]*0.99,breaks[8]*0.99),
+                      labels = label_Function,
                       guide = guide_coloursteps(even.steps = T,
                                                 show.limits = T,
-                                                title = "Interaction",
-                                                barheight = unit(3.3, "in"))) + 
+                                                title = NULL,
+                                                barheight = unit(3.3, "in"),
+                                                label.vjust = 1.5,order=1)) + 
     ggtitle("Average pairwise drug interaction across all experiments") +
     coord_cartesian(clip = 'off') +
     theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),legend.title = element_text(size=10),
@@ -229,6 +234,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
           plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
           axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1),
           axis.text.y = element_text(size = 8, vjust = 0.3, hjust = 1))
+  
   if (length(synscoreList) > 1){
     if (!save_plots){
       print(p1)
@@ -284,7 +290,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
       for (i in 1:length(synscoreList)){
         synSlice = synscoreList[[i]]
         # Labeling top hits
-        synSlice <- synSlice %>% mutate(`Quantile` = ifelse(in_quantile(as.numeric(`Synergy (mean)`))|in_quantile(as.numeric(`Antagonism (mean)`)),
+        synSlice <- synSlice %>% mutate(`Quantile` = ifelse(in_quantile(-as.numeric(`Synergy (mean)`))|in_quantile(as.numeric(`Antagonism (mean)`)),
                                                             paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA))) %>%
           # Duplicate top hit annotations are removed. All annotations for transposed drug treatments are removed, only the annotation for one drug pair is kept.
           mutate(`Quantile` = ifelse(!duplicated(t(apply(synSlice[c("Drug A", "Drug B")], 1, sort))) == TRUE, `Quantile`, as.character(NA)))
@@ -293,11 +299,11 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
         
         
         # Adding a colour variable for p1
-        synSlice <- synSlice %>% mutate(`colp1` = ifelse(`Antagonism (mean)` > `Synergy (mean)`,`Antagonism (mean)`, -`Synergy (mean)`))
+        synSlice <- synSlice %>% mutate(`colp1` = ifelse(`Antagonism (mean)` > -`Synergy (mean)`,`Antagonism (mean)`, `Synergy (mean)`))
         
         
         # For p6, we also create the mirror-image so that we can display both antagonism and synergy
-        synscores3AB <- synSlice %>% mutate(`mean_int` = -`Synergy (mean)`)
+        synscores3AB <- synSlice %>% mutate(`mean_int` = `Synergy (mean)`)
         synscores3BA <- synSlice %>% mutate(`DrugATMP` = `Drug A`,
                                                     `Drug A` = `Drug B`,
                                                     `Drug B` = `DrugATMP`,
@@ -307,7 +313,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
         # synscores3 <- synscores3 %>% mutate(`mean_int` = `mean_int`-mean(`mean_int`))
         
         # Breaks set by quantiles
-        lower_breaks = quantile(-synscores3$`Synergy (mean)`,probs=c(0,0.01,0.1,0.25))
+        lower_breaks = quantile(synscores3$`Synergy (mean)`,probs=c(0,0.01,0.1,0.25))
         upper_breaks = sort(quantile(synscores3$`Antagonism (mean)`,probs=1-c(0,0.01,0.1,0.25)))
         l = max(abs(c(min(lower_breaks)-0.1,max(upper_breaks)+0.1)))
         lower_breaks[1] = -l
@@ -367,13 +373,16 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
           geom_point(color = "gray", shape = 21, aes_string(size = "`Interaction (sd)`")) +
           scale_size(trans = "reverse",range = c(1, 4), name = "Std. dev.") +
           scale_fill_stepsn(colors = Delta_col_palette(n=length(breaks)-1),
-                            breaks = round(breaks,2),
+                            breaks = breaks,
                             values = scales::rescale(breaks),
-                            limits = round(max(abs(synscores3$mean_int))*c(-1,1),2),
+                            limits = c(breaks[1]*0.9999,breaks[8]*0.9999),
+                            labels = label_Function,
                             guide = guide_coloursteps(even.steps = T,
                                                       show.limits = T,
-                                                      title = "Interaction",
-                                                      barheight = unit(3.3, "in"))) +
+                                                      title = NULL,
+                                                      barheight = unit(3.3, "in"),
+                                                      label.vjust = 1.5,
+                                                      order=1)) +
           theme(axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1)) +
           ggtitle(paste("Pairwise drug interaction: ",synSlice$`Experiment ID`[1])) +
           coord_cartesian(clip = 'off') +

@@ -25,11 +25,15 @@ summary.bayesynergy <- function(object,...){
                                           "ec50_1", "ec50_2", "b1", "b2", 
                                           "theta_1", "theta_2", "z",
                                           "log_rVUS_f","log_rVUS_p0", "log_rVUS_Delta", "log_rVUS_syn", "log_rVUS_ant",
-                                          "s2_log10_ec50_1", "s2_log10_ec50_2"))
+                                          "s2_log10_ec50_1", "s2_log10_ec50_2",
+                                          "log10_ec50_1_raw","log10_ec50_2_raw"))
   
   summ = rstan::summary(object$stanfit,pars=coef_names,probs=c(0.025,.5,0.975))$summary
   print(summ,digits=3)
   
   cat("\n")
   cat("log-Pseudo Marginal Likelihood (LPML) = ", object$LPML, "\n")
+  if (object$model$bayes_factor){
+    cat("Estimated Bayes factor in favor of full model over non-interaction only model: ", object$bayesfactor, "\n")
+  }
 }

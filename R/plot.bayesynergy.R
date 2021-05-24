@@ -29,7 +29,8 @@
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
 #' @importFrom inlmisc GetColors
-#' @importFrom grDevices dev.off cairo_pdf png
+#' @importFrom grDevices dev.off
+#' @importFrom Cairo CairoPNG CairoPDF
 #' @importFrom stats quantile
 #' @importFrom htmlwidgets saveWidget 
 #' 
@@ -61,6 +62,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     posterior$la_1 = rep(0,n.save)
     posterior$la_2 = rep(0,n.save)
   }
+  
   unqX1 = log10(sort(unique(x$data$x[,1])))[-1] # Removing -Inf here
   unqX2 = log10(sort(unique(x$data$x[,2])))[-1] # Removing -Inf here
   dx1 = mean(diff(unqX1))
@@ -353,28 +355,32 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
   # Combination scores
   df = data.frame(
     rVUS = c(posterior$rVUS_f, posterior$rVUS_p0,
-             posterior$rVUS_syn, posterior$rVUS_ant),
+             abs(posterior$VUS_syn), posterior$VUS_ant),
     idx = factor(c(rep('rVUS_f',n.save),rep('rVUS_p0',n.save),
-                      rep('rVUS_syn',n.save),rep('rVUS_ant',n.save)),
-                 levels = c('rVUS_f','rVUS_p0','rVUS_syn','rVUS_ant'))
+                      rep('VUS_syn',n.save),rep('VUS_ant',n.save)),
+                 levels = c('rVUS_f','rVUS_p0','VUS_syn','VUS_ant'))
   )
   
   p7 = ggplot(df, aes(x = rVUS, y = idx, fill = stat(x))) +
-    geom_density_ridges_gradient(scale = 3, gradient_lwd = 1., from = 0, to = 100) +
-    scale_fill_viridis_c(name = "rVUS", option = "C",limits=c(0,100)) +
+    geom_density_ridges_gradient(scale = 2, gradient_lwd = 1., from = 0, to = 100) +
+    scale_fill_viridis_c(name = "", option = "C",limits=c(0,100)) +
     labs(title = 'Estimated drug combination scores',
          subtitle = paste0(x$data$experiment_ID,": ",x$data$drug_names[1]," + ", x$data$drug_names[2]),
          y = "") +
     xlim(0,100) +
+    xlab("") +
     scale_y_discrete(limits = unique(rev(df$idx)), 
-                     labels=c(expression(paste("Antagonism (",rVUS(Delta^"+"),")")),
-                              expression(paste("Synergy (",rVUS(Delta^"-"),")")),
-                              expression(paste("Non-interaction efficacy (",rVUS(paste(p[0])),")")),
-                              expression(paste("Overall efficacy (",rVUS(f),")")))) +
+                     labels=c("Antagonism\nVUS(\u0394\u207a)",
+                              "Synergy\n|VUS(\u0394\u207b)|",
+                              "Bliss\nefficacy\nrVUS(p\u2080)",
+                              "Overall\nefficacy\nrVUS(f)")
+                              #expression(paste("Overall efficacy (",rVUS(f),")"))),
+                    #expand = expansion(add = c(0.01))
+                    ) +
                      # labels=c("Antagonism","Synergy","Overall Interaction","Overall Efficacy")) +
-    theme_ridges(font_size = 13, grid = FALSE)
+    theme_ridges(font_size = 12, grid = FALSE)
   
-  
+    
   if (!save_plots){
     # Displaying the plots
     grid.arrange(p1,p2,nrow=2) # Monotherapies
@@ -403,10 +409,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Monotherapies",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     grid.arrange(p1,p2,nrow=2) # Monotherapies
     dev.off()
@@ -427,10 +433,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"DSS",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     print(p6) # DSS scores 
     dev.off()
@@ -438,10 +444,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Response",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     print(p3) # Response surface
     dev.off()
@@ -449,10 +455,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"NonInteraction",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     print(p4) # Noninteraction surface
     dev.off()
@@ -460,10 +466,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"Interaction",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     print(p5) # Interaction surface
     dev.off()
@@ -471,10 +477,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     file.name = paste0(path,paste(x$data$experiment_ID,x$data$drug_names[1],x$data$drug_names[2],"rVUS",sep = "_"))
     if (plotdevice == "pdf"){
       file.name.pdf = paste0(file.name,".pdf")
-      cairo_pdf(file=file.name.pdf, ...)
+      CairoPDF(file=file.name.pdf, ...)
     } else {
       file.name.png = paste0(file.name,".png")
-      png(filename = file.name.png, ...)
+      CairoPNG(filename = file.name.png, ...)
     }
     print(p7) # rVUS scores
     dev.off()

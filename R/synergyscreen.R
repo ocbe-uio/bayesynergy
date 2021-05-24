@@ -96,9 +96,11 @@ synergyscreen = function(experiments, return_samples = F,
   rerun = F
   oldrun = c()
   if (class(experiments)=="synergyscreen"){
-    oldrun = experiments$screenSummary
-    experiments = experiments$failed
-    rerun = T
+    if ("failed" %in% names(experiments)){
+      oldrun = experiments$screenSummary
+      experiments = experiments$failed
+      rerun = T
+    } else (stop("No failed experiments found"))
   }
   
   # Create container for results
@@ -192,26 +194,29 @@ synergyscreen = function(experiments, return_samples = F,
                                `EC50 (Drug B)` = summaryStats["ec50_2","mean"],
                                `DSS (Drug A)` = summaryStats["dss_1","mean"],
                                `DSS (Drug B)` = summaryStats["dss_2","mean"],
-                               `Synergy (mean)` = summaryStats["rVUS_syn","mean"],
-                               `Synergy (sd)` = summaryStats["rVUS_syn","sd"],
-                               `Antagonism (mean)` = summaryStats["rVUS_ant","mean"],
-                               `Antagonism (sd)` = summaryStats["rVUS_ant","sd"],
+                               `Synergy (mean)` = summaryStats["VUS_syn","mean"],
+                               `Synergy (sd)` = summaryStats["VUS_syn","sd"],
+                               `Antagonism (mean)` = summaryStats["VUS_ant","mean"],
+                               `Antagonism (sd)` = summaryStats["VUS_ant","sd"],
                                `Efficacy (mean)` = summaryStats["rVUS_f","mean"],
                                `Efficacy (sd)` = summaryStats["rVUS_f","sd"],
                                `Non-interaction Efficacy (mean)` = summaryStats["rVUS_p0","mean"],
                                `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
-                               `Interaction (mean)` = summaryStats["rVUS_Delta","mean"],
-                               `Interaction (sd)` = summaryStats["rVUS_Delta","sd"],
+                               `Interaction (mean)` = summaryStats["VUS_Delta","mean"],
+                               `Interaction (sd)` = summaryStats["VUS_Delta","sd"],
                                
                                # Calculate standardized scores for comparisons
-                               `Synergy Score` = summaryStats["rVUS_syn","mean"]/summaryStats["rVUS_syn","sd"],
-                               `Antagonism Score` = summaryStats["rVUS_ant","mean"]/summaryStats["rVUS_ant","sd"],
+                               `Synergy Score` = summaryStats["VUS_syn","mean"]/summaryStats["VUS_syn","sd"],
+                               `Antagonism Score` = summaryStats["VUS_ant","mean"]/summaryStats["VUS_ant","sd"],
                                # Finally some information about model fit
                                `s` = summaryStats["s", "mean"],
                                `returnCode` = fit$returnCode,
                                `divergentTransitions` = sum(fit$divergent),
                                
                                check.names = FALSE, stringsAsFactors = FALSE)
+                             if (fit$model$bayes_factor){
+                               synMetrics$`Bayes Factor` = fit$bayesfactor
+                             }
                            } else {
                              # Create some summaries
                              summaryStats = rstan::summary(fit$stanfit)$summary
@@ -245,7 +250,9 @@ synergyscreen = function(experiments, return_samples = F,
                                `divergentTransitions` = NA,
                                
                                check.names = FALSE, stringsAsFactors = FALSE)
-                             
+                             if (fit$model$bayes_factor){
+                               synMetrics$`Bayes Factor` = NA
+                             }
                            }
                          })
                          
@@ -331,26 +338,30 @@ synergyscreen = function(experiments, return_samples = F,
             `EC50 (Drug B)` = summaryStats["ec50_2","mean"],
             `DSS (Drug A)` = summaryStats["dss_1","mean"],
             `DSS (Drug B)` = summaryStats["dss_2","mean"],
-            `Synergy (mean)` = summaryStats["rVUS_syn","mean"],
-            `Synergy (sd)` = summaryStats["rVUS_syn","sd"],
-            `Antagonism (mean)` = summaryStats["rVUS_ant","mean"],
-            `Antagonism (sd)` = summaryStats["rVUS_ant","sd"],
+            `Synergy (mean)` = summaryStats["VUS_syn","mean"],
+            `Synergy (sd)` = summaryStats["VUS_syn","sd"],
+            `Antagonism (mean)` = summaryStats["VUS_ant","mean"],
+            `Antagonism (sd)` = summaryStats["VUS_ant","sd"],
             `Efficacy (mean)` = summaryStats["rVUS_f","mean"],
             `Efficacy (sd)` = summaryStats["rVUS_f","sd"],
             `Non-interaction Efficacy (mean)` = summaryStats["rVUS_p0","mean"],
             `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
-            `Interaction (mean)` = summaryStats["rVUS_Delta","mean"],
-            `Interaction (sd)` = summaryStats["rVUS_Delta","sd"],
+            `Interaction (mean)` = summaryStats["VUS_Delta","mean"],
+            `Interaction (sd)` = summaryStats["VUS_Delta","sd"],
             
             # Calculate standardized scores for comparisons
-            `Synergy Score` = summaryStats["rVUS_syn","mean"]/summaryStats["rVUS_syn","sd"],
-            `Antagonism Score` = summaryStats["rVUS_ant","mean"]/summaryStats["rVUS_ant","sd"],
+            `Synergy Score` = summaryStats["VUS_syn","mean"]/summaryStats["VUS_syn","sd"],
+            `Antagonism Score` = summaryStats["VUS_ant","mean"]/summaryStats["VUS_ant","sd"],
             # Finally some information about model fit
             `s` = summaryStats["s", "mean"],
             `returnCode` = fit$returnCode,
             `divergentTransitions` = sum(fit$divergent),
             
             check.names = FALSE, stringsAsFactors = FALSE)
+          if (fit$model$bayes_factor){
+            synMetrics$`Bayes Factor` = fit$bayesfactor
+          }
+          
         } else {
           # Create some summaries
           summaryStats = rstan::summary(fit$stanfit)$summary
@@ -384,7 +395,9 @@ synergyscreen = function(experiments, return_samples = F,
             `divergentTransitions` = NA,
             
             check.names = FALSE, stringsAsFactors = FALSE)
-          
+          if (fit$model$bayes_factor){
+            synMetrics$`Bayes Factor` = NA
+          }
         }
       })
       

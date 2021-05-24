@@ -2,7 +2,7 @@
 title: "bayesynergy: flexible Bayesian modelling of synergistic interaction effects
   in in-vitro drug combination experiments"
 author: "Leiv Rønneberg"
-date: "7/4/2021"
+date: "14/5/2021"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -155,47 +155,74 @@ For the monotherapy curves, we produce estimates of the drug sensitivity score (
 $$
 DSS_0 = \int_a^b 1-h_j(x) \text{d}x,
 $$ 
-where $a=h_j^{-1}(1-\epsilon/2)$ and $b=\max(x_{1j})$. That is, the integral is taken from where $h_j$ crosses an 'activation threshold' $1-\epsilon/2$, to the maximum value measured of the drug concentration in the screen. The activation treshold $\epsilon$ is set to 5%. This value is further standardized by the total volume available for drug efficacy,
+where $a=\min(x_{1j})$ and $b=\max(x_{1j})$. That is, the integral is taken from the measured dose range of the drug in question. This is in contrast to how the regular DSS score is calculated, where integration starts where the mono-therapy crosses the 90\% viability threshold. This is done to better separate true effects from background noise, but since this is handled here through sampling, we don't need it. The DSS value is further standardized by the total volume available for drug efficacy,
 $$
-DSS = \frac{DSS_0}{(1-\epsilon/2)(b-a)}
+DSS = \frac{DSS_0}{(b-a)}
 $$
-From here, values can be further standardized as in @Yadav_2014
+From here, values can be further standardized as in @Yadav_2014.
 
 ### Combination summaries
-To summarise the total drug-response function, we utilise the measures developed in @Cremaschi_2019. As with the DSS scores, we calculate the area above the response function, and denote this the 'residual volume under the surface' or **rVUS** -- as it's the volume left over from integrating the surface.
-
-In general, the integral looks like
+To summarise the combined drug-response function, we utilise the measures developed in @Cremaschi_2019. The basic building block is the 'volume under the surface' or **VUS**, for which the general integral looks like
 
 $$
-rVUS_0(f) = \int_a^b \int_c^d 1-f(\mathbf{x}) \ \text{d}\mathbf{x}
+VUS_0(f) = \int_a^b \int_c^d f(\mathbf{x}) \ \text{d}\mathbf{x},
 $$
-where the integrals are taken over the observed drug range, i.e. $a = \min (x_1)$, $b = \max (x_1)$, $c = \min (x_2)$, $d = \max (x_2)$.
+and the integrals are taken over the observed drug range, i.e. $a = \min (x_1)$, $b = \max (x_1)$, $c = \min (x_2)$, $d = \max (x_2)$. This is then standardised to obtain a value between zero and 100,
+$$
+VUS(f) = \frac{VUS_0(f)}{(b-a)(d-c)}.
+$$
+Furthermore, to make this into an overall measure of efficacy, we define the *residual* VUS (**rVUS**) by
 
-From here, we further standardise the rVUS scores to the total volume available for efficacy
+$$
+rVUS(f) = 100 - VUS(f),
+$$
+which makes this value more comparable with the DSS values, where a higher number now indicates a larger efficacy of the drug combination.
 
-$$
-rVUS(f) = \frac{rVUS_0(f)}{(b-a)(d-c)}.
-$$
-The model calculates $rVUS$ for the dose-response function $f$, giving a measure of combined efficacy. In addition, we calculate $rVUS(p_0)$, the non-interaction efficacy; $rVUS(\Delta)$ the interaction efficacy. For the interaction term $\Delta$, we also compute $rVUS(\Delta^{-})$ and $rVUS(\Delta^{+})$ for synergy and antagonism, where $\Delta^{+}$ and $\Delta^{-}$ denotes the positive and negative parts of $\Delta$, respectively. That is,
+The model calculates $rVUS$ for the dose-response function $f$, giving a measure of combined efficacy. In addition, we calculate $rVUS(p_0)$, the non-interaction efficacy. This makes it possible to separate how much of the total efficacy that can be attributed to the non-interaction assumption. For the interaction term, we simply compute the **VUS** values e.g. $VUS(\Delta)$ for the interaction efficacy. For the interaction term $\Delta$, we also compute $VUS(\Delta^{-})$ and $VUS(\Delta^{+})$ for synergy and antagonism, where $\Delta^{+}$ and $\Delta^{-}$ denotes the positive and negative parts of $\Delta$, respectively. That is,
 
 $$
 \Delta^{+}(\mathbf{x}) = \max(0,\Delta(\mathbf{x})) \\
-\Delta^{-}(\mathbf{x}) = \max(0,-\Delta(\mathbf{x})).
+\Delta^{-}(\mathbf{x}) = \min(0,\Delta(\mathbf{x})).
 $$
+We compute these measures because, frequently, the interaction surface contains both antagonistic and synergistic regions. When taking the average across the whole surface, an antagonistic outlier might cancel an otherwise strong synergistic effect.
+
 
 ### Summarising large screens
 
 When running screens with a large amount of drug combinations, it is helpful to have a normalised measure for comparing synergy across experiments. The $rVUS$ scores defined above are already standardized to their drug concentration range, but to compare across experiments, we also standardize with respect to the uncertainty in the model. To do this, we calculate a **synergy score** by normalizing $rVUS(\Delta^{-})$ with respect to its standard deviation.
 $$
-\text{Synergy score} = \frac{\text{mean}(rVUS(\Delta^{-}))}{\text{sd}(rVUS(\Delta^{-}))}.
+\text{Synergy score} = \frac{\text{mean}(VUS(\Delta^{-}))}{\text{sd}(VUS(\Delta^{-}))}.
 $$
+
+## Synergy classification
+Frequently, it is of interest to classify an experiment as *synergistic* or *antagonistic*. Usually, this has been done by thresholding the synergy measure at a certain level, declaring e.g. everything above 10 as synergistic, everything below -10 antagonistic, and anything in between as additive (no interaction). The problem with this is that it completely ignores the underlying measurement error, and as a consequence the thresholding procedure can lead to misclassification. Large synergistic effects might be classified as synergistic, but in reality the effect cannot be discerned from the background noise. In the same manner, genuine synergistic effects that are too small, for example because the dose-ranges are a bit off, will also be misclassified. By incorporating the uncertainty into the classification it can be done in a more principled manner.
+
+In Bayesian inference, we can compute what is know as the model *evidence*. That is, given a probabilistic model $\mathcal{M}$, and some data we think is generated from it, $\mathcal{D}$, the evidence is defined as the probability of the model given the data, $P(\mathcal{M} \vert \mathcal{D})$. We can use this quantity to compare different models, in particular when comparing two distinct models we can define the **Bayes Factor, $\text{BF}_{10}$**:
+$$
+\text{BF}_{10}=\frac{P(\mathcal{D}\vert\mathcal{M}_1)}{P(\mathcal{D}\vert\mathcal{M}_0)} = \frac{P(\mathcal{M}_1 \vert \mathcal{D})}{P(\mathcal{M}_0 \vert \mathcal{D})}\frac{P(\mathcal{M}_1)}{P(\mathcal{M}_0)},
+$$
+where $P(\mathcal{M}_1)$ and $P(\mathcal{M}_0)$ denotes the prior model probabilities. By defining
+$$
+\mathcal{M}_0: f(\mathbf{x}) = p_0(\mathbf{x}) \\
+\mathcal{M}_1: f(\mathbf{x}) = p_0(\mathbf{x}) + \Delta(\mathbf{x}),
+$$
+and computing $\text{BF}_{10}$, the Bayes factor gives information on whether the interaction surface needs to be included in the model. A high value indicates that $\mathcal{M}_1$ is preferred over $\mathcal{M}_0$, and thus that there most likely is some interaction in the experiment. One still needs to make a cutoff, but it will be less arbitrary by connecting it directly to the uncertainty in the model, and model evidence. The thresholding itself can be done according to e.g. the table in @Kass1995:
+
+```{r,echo=F,cache=T}
+df = data.frame("BF10" = c("1 to 3.2","3.2 to 10","10 to 100",">100"),"Evidence against M0" = c("Not worth more than a bare mention","Substantial","Strong","Decisive"))
+knitr::kable(df,col.names = c("$\\text{BF}_{10}$","Evidence against $\\mathcal{M}_0$"),align="cc",format = "simple")
+```
+
+The Bayes factor only gives information about whether or not an interaction is present. Depending on the classification task, one still needs to decide if the effect is synergistic or antagonistic. For this one could e.g. use the integral of the interaction surface, $\text{VUS}(\Delta)$, if this is negative the experiment is coded as synergistic, if positive it is coded as antagonistic.
+
+The calculation of the Bayes factor is implemented directly in the `bayesynergy` function, and can be calculated simply by adding `bayes_factor = T` to the call. Model evidence and the Bayes factor itself is computed via the `bridgesampling` package (@Gronau2020).
 
 # A simple example -- a single experiment
 In the R package, we've attached two example datasets from a large drug combination screening experiment on diffuse large B-cell lymphoma. We'll use these to show some simple use cases of the main functions and how to interpret the results.
 
 Let's load in the first example and have a look at it
 
-```{r load_example}
+```{r load_example,cache=T}
 library(bayesynergy)
 data("mathews_DLBCL")
 y = mathews_DLBCL[[1]][[1]]
@@ -204,26 +231,26 @@ head(cbind(y,x))
 ```
 We see that the the measured viability scores are stored in the vector `y`, while `x` is a matrix with two columns giving the corresponding concentrations where the viability scores were read off.
 
-Fitting the regression model is simple enough, and can be done on default settings simply by running the following code (where we add the names of the drugs involved, as well as the concentration units for plotting purposes).
+Fitting the regression model is simple enough, and can be done on default settings simply by running the following code (where we add the names of the drugs involved, the concentration units for plotting purposes, and calculate the bayes factor).
 
-```{r regular_fit, cache = F, warning = FALSE}
+```{r regular_fit, cache = T, warning = FALSE}
 fit = bayesynergy(y,x, drug_names = c("ibrutinib", "ispinesib"),
-                  units = c("nM","nM"))
+                  units = c("nM","nM"),bayes_factor = T)
 ```
 
 The resulting model can be summarised by running
 
-```{r summary_fit}
+```{r summary_fit,cache=T}
 summary(fit)
 ```
-which gives posterior summaries of the parameters of the model. In addition, the model calculates summary statistics of the monotherapy curves and the dose-response surface including drug sensitivity scores (DSS) for the two drugs in question, as well as the residual volumes under the surface (rVUS) that capture the notion of efficacy (`rVUS_f`), interaction (`rVUS_Delta`), synergy (`rVUS_syn`) and interaction (`rVUS_ant`). 
+which gives posterior summaries of the parameters of the model. In addition, the model calculates summary statistics of the monotherapy curves and the dose-response surface including drug sensitivity scores (DSS) for the two drugs in question, as well as the volumes that capture the notion of efficacy (`rVUS_f`), interaction (`VUS_Delta`), synergy (`VUS_syn`) and interaction (`VUS_ant`).
 
-As indicated, the total combined drug efficacy is around 80% (`rVUS_f`), of which around 70 percentage points can be attributed to $p_0$ (`rVUS_p0`), leaving room for 10 percentage points worth of synergy (`rVUS_syn`). We can also note that the model is fairly certain of this effect, with a 95% credible interval given as (`r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["rVUS_syn",4],3)`, `r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["rVUS_syn",6],3)`).
+As indicated, the total combined drug efficacy is around 80% (`rVUS_f`), of which around 70 percentage points can be attributed to $p_0$ (`rVUS_p0`), leaving room for 10 percentage points worth of synergy (`VUS_syn`). We can also note that the model is fairly certain of this effect, with a 95% credible interval given as (`r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["VUS_syn",4],3)`, `r round(rstan::summary(fit$stanfit,probs=c(0.025,.5,0.975))$summary["VUS_syn",6],3)`). The certainty of this is also verified by the Bayes factor, which at `r round(fit$bayesfactor,2)` indicates strong evidence of an interaction effect present in the model.
 
 
 We can also create plots by simply running
 
-```{r regular_plots, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7), fig.show="hold", results="hide", fig.keep ="all"}
+```{r regular_plots, cache = T, warning = FALSE, message = FALSE, fig.dim = c(7,7), fig.show="hold", results="hide", fig.keep ="all"}
 plot(fit, plot3D = F)
 ```   
 which produces monotherapy curves, monotherapy summary statistics, 2D contour plots of the dose-response function $f$, the non-interaction assumption $p_0$ and the interaction $\Delta$. The last plot displays the $rVUS$ scores as discussed previously, with corresponding uncertainty.
@@ -231,7 +258,7 @@ which produces monotherapy curves, monotherapy summary statistics, 2D contour pl
 
 The package can also generate 3D interactive plots by setting `plot3D = T`. These are displayed as following using the plotly library (@plotly).
 
-```{r 3dresponse, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+```{r 3dresponse, echo = F, cache = T, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
 x = fit
 # Creating some stuff needed for plots
 library(plotly)
@@ -347,7 +374,7 @@ library(plotly)
   
 ```   
 
-```{r 3dnoninteraction, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+```{r 3dnoninteraction, echo = F, cache = T, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
 
 z_p0 = x$posterior_mean$p0[-1,-1]
     fig = plot_ly(x = unqX1, y = unqX2, z = z_p0)
@@ -379,7 +406,7 @@ z_p0 = x$posterior_mean$p0[-1,-1]
 
 ```
 
-```{r 3dinteraction, echo = F, cache = F, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
+```{r 3dinteraction, echo = F, cache = T, warning = FALSE, message = FALSE, fig.dim = c(7,7)}
 
 # Interaction
     z_Delta = x$posterior_mean$Delta[-1,-1]
@@ -407,12 +434,16 @@ z_p0 = x$posterior_mean$p0[-1,-1]
 
 ```
 
+
+
+
+
 # A simple example -- a synergy screen
 The `synergyscreen` provides a work flow for data from big drug combination screens, where multiple drugs are tested in combination on multiple cell lines. It takes as input a list of experiments, each entry being a list containing the necessary elements needed for a call to the main regression function `bayesynergy`.
 
 Included in the package is the result of a `synergyscreen` run of 583 drug combinations on the A-375 human melanoma cell line from @ONeil_2016. The `synergyscreen` object is a list with two entries, a dataframe with parameter estimates from each experiment, and a list entitled `failed` -- containing experiments that either failed completely to process, or had an unsatisfactory fit.
 
-```{r synergyscreen_load, cache = F}
+```{r synergyscreen_load, cache = T}
 data("ONeil_A375")
 length(ONeil_A375$failed)
 ```
@@ -420,30 +451,30 @@ We see that the dataset has two experiments that failed to process, during an in
 
 The entries of `failed` are themselves lists, each containing the necessary information to process through the `bayesynergy` function 
 
-```{r synergyscreen_load2, cache = F}
+```{r synergyscreen_load2, cache = T}
 failed_experiment = ONeil_A375$failed[[1]]
 names(failed_experiment)
 ```
 
-``` {r, echo = F}
+``` {r, echo = F,cache=T}
 colnames(failed_experiment$x) = failed_experiment$drug_names
 colnames(failed_experiment$y) = "viability"
 ```
 
-``` {r}
+``` {r,cache=T}
 head(cbind(failed_experiment$y,failed_experiment$x))
 ```
 
 We can rerun experiments that failed to process, by simply passing the returned `synergyscreen` object back into the function. Note that we turn of the default options of saving each fit and plotting everything, and set `method = "vb"` indicating we use variational inference to fit the model.
 
-``` {r synergyscreen_fit, cache = F, warning = F}
+``` {r synergyscreen_fit, cache = T, warning = F}
 fit_screen = synergyscreen(ONeil_A375, save_raw = F, save_plots = F, parallel = F, 
                            bayesynergy_params = list(method = "vb"))
 ```
 
 
 We can also plot the result of the screen:
-```{r synergyscreen, cache = F, warning = FALSE, message = FALSE, fig.dim = c(8,8), fig.show="hold", results="hide", fig.keep ="all"}
+```{r synergyscreen, cache = T, warning = FALSE, message = FALSE, fig.dim = c(8,8), fig.show="hold", results="hide", fig.keep ="all"}
 plot(fit_screen)
 ```
 

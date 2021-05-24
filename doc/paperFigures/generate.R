@@ -18,7 +18,7 @@ library(bayesynergy)
 # Data for figure 4 is included in the folder
 load("screen.RData")
 
-plot(fit_screen,save_plots=T,plotdevice="png", width=7,height=7,units="in",res=600, 
+plot(fit_screen,save_plots=T,plotdevice="png", width=9,height=7,units="in",res=600, 
      groupbyExperimentID=F)
 
 
@@ -37,10 +37,75 @@ drug_names = c(data$drugA_name[1],data$drugB_name[1])
 experiment_ID = data$cell_line[1]
 units = c("μM","μM")
 
-fit = bayesynergy(y=y, x=x, drug_names=drug_names, experiment_ID = experiment_ID, units=units)
+fit = bayesynergy(y=y, x=x, drug_names=drug_names, experiment_ID = experiment_ID, units=units, bayes_factor =T)
 
 plot(fit,save_plots=T, plotdevice="png", width=7,height=7,units="in",res=600, plot3D=F)
 
+### Calculating the synergy score used in synergyfinder
+post = rstan::extract(fit$stanfit)
+# Mean
+synergyscore = apply(-100*post$Delta,1,mean)
+c(mean(synergyscore),quantile(synergyscore,prob=c(0.025,0.975)))
+###
+
+########################################################################################
+############################   Supplementary  ##########################################
+###### Gemcitabine + MK-8776 on the OCUBM cell line - HSA reference model     ##########
+########################################################################################
+library(caTools)
+# Pull out posterior samples
+post = rstan::extract(fit$stanfit)
+# log10 concentrations
+unqX1 = log10(sort(unique(x[,1]))[-1])
+unqX2 = log10(sort(unique(x[,2]))[-1])
+# Posterior samples from the mono-therapy curves at each location
+# (For HSA we don't need model parameters, only evaluations)
+p01 = post$p01
+p02 = post$p02
+# Some parameters
+n.iter = dim(p02)[1]
+n1 = length(unqX1)
+n2 = length(unqX2)
+# Containers
+p0.tilde = array(NA,dim=c(n.iter,n2,n1))
+Delta.tilde = array(NA,dim=c(n.iter,n2,n1))
+rVUS.p0.tilde = array(NA,dim=c(n.iter,1))
+VUS.Delta = array(NA,dim=c(n.iter,1))
+VUS.syn = array(NA,dim=c(n.iter,1))
+VUS.ant = array(NA,dim=c(n.iter,1))
+# Looping through
+for (i in 1:n.iter){
+  # Create HSA p0
+  P01 = matrix(rep(p01[i,],n2),byrow=T,ncol=n1)
+  P02 = matrix(rep(p02[i,],n1),byrow=F,ncol=n1)
+  p0.tilde[i,,] = pmin(P01,P02)
+  # Subtract from f
+  f = post$p0[i,,] + post$Delta[i,,]
+  Delta.tilde[i,,] = f - p0.tilde[i,,]
+  # Calculate summary measures
+  Delta.ant = pmax(Delta.tilde[i,,],0)
+  Delta.syn = pmin(Delta.tilde[i,,],0)
+  rVUS.p0.tilde = 100 - trapz(unqX2, apply(p0.tilde[i,,], 1, trapz, x = unqX1))/diff(range(unqX1))/diff(range(unqX2)) * 100
+  VUS.Delta[i] = trapz(unqX2, apply(Delta.tilde[i,,], 1, trapz, x = unqX1))/diff(range(unqX1))/diff(range(unqX2)) * 100
+  VUS.syn[i] = trapz(unqX2, apply(Delta.syn, 1, trapz, x = unqX1))/diff(range(unqX1))/diff(range(unqX2)) * 100
+  VUS.ant[i] = trapz(unqX2, apply(Delta.ant, 1, trapz, x = unqX1))/diff(range(unqX1))/diff(range(unqX2)) * 100
+}
+# Calculate posterior means and the synergy score
+Syn.score = mean(VUS.syn)/sd(VUS.syn)
+Ant.score = mean(VUS.ant)/sd(VUS.ant)
+Delta.tilde.mean = apply(Delta.tilde,c(2,3),mean)
+p0.tilde.mean = apply(p0.tilde,c(2,3),mean)
+# Summaries
+summ = cbind((round(apply(cbind(rVUS.p0.tilde,VUS.syn,VUS.ant),2,mean),2)),
+t(round(apply(cbind(rVUS.p0.tilde,VUS.syn,VUS.ant),2,function (x) quantile(x,probs=c(0.025,0.975))),2)))
+rownames(summ) <- c("rVUS.p0.tilde","VUS.syn","VUS.ant")
+colnames(summ) <- c("mean","2.5%","97.5%")
+summ
+# And easiest way to generate plots now is by inserting these new posterior means directly into the fitted object
+fit.tilde = fit
+fit.tilde$posterior_mean$p0[2:(n2+1),2:(n1+1)] = p0.tilde.mean
+fit.tilde$posterior_mean$Delta[2:(n2+1),2:(n1+1)] = Delta.tilde.mean
+plot(fit.tilde,save_plots=T, plotdevice="png", width=7,height=7,units="in",res=600, plot3D=F)
 
 
 ########################################################################################
@@ -49,8 +114,87 @@ plot(fit,save_plots=T, plotdevice="png", width=7,height=7,units="in",res=600, pl
 ########################################################################################
 summary(fit)
 
+########################################################################################
+###### Gemcitabine + MK-8776 on the OCUBM cell line     ################################
+###### Synergy calculated via DECREASE + synergyfinder  ################################
+########################################################################################
 
 
+############### Estimating monotherapies only, for use in DECREASE imputation   ########
+data = read.table("OCUBM : Gemcitabine + MK-8776.csv",sep=",",header=T)
+
+x = as.matrix(data[,c(4,6)])
+y = data$viability
+# Remove viability observations that are not mono-therapies
+y[which((x[,1] != 0) & (x[,2] != 0))] = NA
+drug_names = c(data$drugA_name[1],data$drugB_name[1])
+experiment_ID = data$cell_line[1]
+units = c("μM","μM")
+
+monos = bayesynergy(y=y, x=x, drug_names=drug_names, experiment_ID = experiment_ID, units=units)
+
+# We can pull out posterior evaluation of the two monotherapy curves directly from this output
+Gemcitabine = data.frame(viability = apply(rstan::extract(monos$stanfit)$p01,2,mean),
+                         concentration = sort(unique(monos$data$x[,1]))[-1])
+MK8776 = data.frame(viability = apply(rstan::extract(monos$stanfit)$p02,2,mean),
+                    concentration = sort(unique(monos$data$x[,2]))[-1])
+# Now, DECREASE does not accept replicates, so we opt for running DECREASE 4 times,
+# one for each replicate of the combination concentrations, so we spit out 
+# 4 files that we pass to DECREASE. Since mono-therapies come in six replicates,
+# we opt for using the posterior mean instead of the replicates here, otherwise
+# we would have to throw away information (two replicates of monotherapies)
+
+# Format
+# "PairIndex","Drug1","Drug2","Conc1","Conc2","Response","ConcUnit"
+Gemcitabine = Gemcitabine %>% mutate("PairIndex" = 1, "Drug1" = "Gemcitabine", 
+                             "Drug2" = "MK-8776", "Conc1" = `concentration`,
+                             "Conc2" = 0, "Response" = `viability`,"ConcUnit" = "μM") %>%
+  select(c("PairIndex","Drug1","Drug2","Conc1","Conc2","Response","ConcUnit"))
+MK8776 = MK8776 %>% mutate("PairIndex" = 1, "Drug1" = "Gemcitabine", 
+                                "Drug2" = "MK-8776", "Conc1" = 0,
+                                "Conc2" = `concentration`, "Response" = `viability`,"ConcUnit" = "μM") %>%
+  select(c("PairIndex","Drug1","Drug2","Conc1","Conc2","Response","ConcUnit"))
+# Pull out the combinations and enumerate replicates
+combination = data[which((data$drugA.Conc..µM. != 0) & data$drugB.Conc..µM. != 0),]
+combination = combination %>% arrange(`drugA.Conc..µM.`,drugB.Conc..µM.) %>%
+  mutate(replicate = rep(1:4,16)) %>%
+  mutate("PairIndex" = 1, "Drug1" = "Gemcitabine", 
+         "Drug2" = "MK-8776", "Conc1" = `drugA.Conc..µM.`,
+         "Conc2" = `drugB.Conc..µM.`, "Response" = `viability`,"ConcUnit" = "μM") %>%
+  select(c("PairIndex","Drug1","Drug2","Conc1","Conc2","Response","ConcUnit","replicate"))
+for (i in 1:4){
+  tmp = combination %>% filter(`replicate` == i) %>% select(-"replicate")
+  # Create the zero concentration observation
+  zero = tmp[1,]
+  zero$Conc1 = 0
+  zero$Conc2 = 0
+  zero$Response = 1
+  toDecrease = rbind(zero,Gemcitabine,MK8776,tmp)
+  toDecrease$Response = (1-toDecrease$Response)*100
+  toDecrease$Conc1 = toDecrease$Conc1*10000
+  toDecrease$Conc2 = toDecrease$Conc2*10000
+  toDecrease$PairIndex = i
+  if (i == 1){
+    write.table(toDecrease,file="toDecrease.csv",sep = ",",row.names = F)
+  } else {
+    write.table(toDecrease,file="toDecrease.csv",sep = ",",row.names = F,append=T,col.names=F)
+  }
+  
+}
+# Output: Files toDecrease1-4.csv, that then needs to be fed into DECREASE at https://decrease.fimm.fi/
+# In DECREASE, select input format as table, readout as inhibition, then run decrease
+# Save the files from DECREASE as fromDecrease1-4.csv in synergyfinder format, 
+# these are further processed below to remove monotherapy replicates:
+for (i in 1:4){
+  fromDecrease = read.table(file=paste0("fromDecrease",i,".csv"),header=T,sep=",")
+  if (i ==1){
+    write.table(fromDecrease,file="toSynergyfinder.csv",sep=",",row.names=F)
+  } else {
+    fromDecrease = fromDecrease %>% filter(!(`Conc1` == 0 | `Conc2` == 0))
+    write.table(fromDecrease,file="toSynergyfinder.csv",sep=",",row.names=F,col.names=F,append=T)
+  }
+}
+# Outputs toSynergyfinder.csv that can be directly processed by synergyfinder 2.0 at https://synergyfinder.fimm.fi/
 
 
 # References:

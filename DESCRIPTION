@@ -8,6 +8,8 @@ Maintainer: Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
 Description: The package implements a Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between different kernels for the definition of the covariance structure.
 License: GPL (>= 2)
 Imports: 
+    bridgesampling,
+    Cairo,
     doParallel,
     doSNOW,
     dplyr,

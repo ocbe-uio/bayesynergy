@@ -14,6 +14,7 @@ bayesynergy(
   units = NULL,
   lower_asymptotes = T,
   heteroscedastic = T,
+  bayes_factor = F,
   noise_hypers = c(5, 1),
   lambda = 0.005,
   nu = 1.5,
@@ -39,6 +40,8 @@ bayesynergy(
 
 \item{heteroscedastic}{logical; if TRUE, the model will assume heteroscedastic measurement error.}
 
+\item{bayes_factor}{logical; if TRUE, the Bayes factor is computed between the full model, and a model containing only the non-interaction surface.}
+
 \item{noise_hypers}{vector of size 2; hyperparameters for the Inv-Gamma prior on the observation noise. The user can set these to reflect the variance in negative controls.}
 
 \item{lambda}{numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.}
@@ -60,6 +63,9 @@ data \tab A list containing the original data used to fit the model. \cr
 model \tab A list containing model specification for the model fit. \cr
 returnCode \tab numeric; non-zero values indicate model was fit with errors or warnings \cr
 LPML \tab numeric; The log pseudo-marginal likelihood of the fitted model. \cr
+divergent \tab numeric; The number of divergent transitions from the Hamiltonian sampler. \cr
+messages \tab character; any warnings are collected here for inspection. \cr
+bayesfactor \tab numeric; The Bayes factor comparing the full model to a simpler model containing only the non-interaction assumption, p0. A large number indicating that an interaction effect is present. See the package vignette for more information.
 }
 }
 \description{

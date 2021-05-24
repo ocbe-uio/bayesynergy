@@ -11,6 +11,7 @@
 #' @param units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' @param lower_asymptotes logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.
 #' @param heteroscedastic logical; if TRUE, the model will assume heteroscedastic measurement error.
+#' @param bayes_factor logical; if TRUE, the Bayes factor is computed between the full model, and a model containing only the non-interaction surface.
 #' @param noise_hypers vector of size 2; hyperparameters for the Inv-Gamma prior on the observation noise. The user can set these to reflect the variance in negative controls.
 #' @param lambda numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.
 #' @param nu numeric; the nu parameter for the Matérn kernel. Must be one of (0.5, 1.5, 2.5)
@@ -26,6 +27,9 @@
 #' model \tab A list containing model specification for the model fit. \cr
 #' returnCode \tab numeric; non-zero values indicate model was fit with errors or warnings \cr
 #' LPML \tab numeric; The log pseudo-marginal likelihood of the fitted model. \cr
+#' divergent \tab numeric; The number of divergent transitions from the Hamiltonian sampler. \cr
+#' messages \tab character; any warnings are collected here for inspection. \cr
+#' bayesfactor \tab numeric; The Bayes factor comparing the full model to a simpler model containing only the non-interaction assumption, p0. A large number indicating that an interaction effect is present. See the package vignette for more information.
 #' }
 #' 
 #' 
@@ -39,12 +43,14 @@
 #' }
 #' 
 #' @importFrom utils modifyList
+#' @importFrom bridgesampling bridge_sampler bf
 #' 
 #' @export
 
 
 bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, units = NULL,
-                        lower_asymptotes = T, heteroscedastic = T, noise_hypers = c(5,1), lambda = 0.005, nu = 1.5 , method = "sampling",
+                        lower_asymptotes = T, heteroscedastic = T, bayes_factor = F, noise_hypers = c(5,1),
+                        lambda = 0.005, nu = 1.5 , method = "sampling",
                         control = list(), ...){
   
   # Keep original data
@@ -60,7 +66,9 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   }
   if (type == 2 & !(nu %in% c(0.5,1.5,2.5))){
     stop("Argument 'nu' must be one of {1/2,3/2,5/2}!")
-    
+  }
+  if (type == 1 & bayes_factor){
+    stop("Bayes factor calculation not available for type = 1")
   }
   
   # Checking that data input is valid
@@ -77,6 +85,10 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   }
   if (min(x[,1]) > 0 | min(x[,2]) > 0){
     stop("Missing monotherapy data! Make sure 'x' contains zero concentrations")
+  }
+  # Bayes factor requires sampling
+  if (bayes_factor & method!="sampling"){
+    stop("Computing the Bayes factor requires method = 'sampling')")
   }
   
   # GP models need adapt_delta > 0.9, so set that here
@@ -136,8 +148,9 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   
   # Setting up data for Stan
   stan_data = list(n1=length(unqX1), n2=length(unqX2), x1=unqX1, x2=unqX2, nrep=nrep,
-       y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes,
-       heteroscedastic = heteroscedastic, noise_hypers = noise_hypers, lambda = lambda)
+                   y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes,
+                   heteroscedastic = heteroscedastic, noise_hypers = noise_hypers, lambda = lambda)
+  stan_data_nointeraction = stan_data
   if (type == 1){ # Splines
     stan_data$n_knots1 = n_knots1
     stan_data$n_knots2 = n_knots2
@@ -169,6 +182,8 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   
   # Placeholder for fit
   fit = c()
+  # Placeholder for model fit without interaction term
+  fitH0 = c()
   # Return code will capture warnings
   returnCode = 0
   # messages will store them
@@ -184,6 +199,9 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
       }
       else {
         fit = rstan::sampling(stanmodels$gp_grid,stan_data, control = control, ...)
+        if (bayes_factor){
+          fitH0 = rstan::sampling(stanmodels$nointeraction,stan_data_nointeraction, control = control,refresh=-1, ...)
+        }
       }
     } else if (method == "vb"){
       if (type==1){
@@ -210,7 +228,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   coef_names = names(posterior)
   # Remove those we don't care about
   coef_names = setdiff(coef_names,c("z","p0","p01","p02","Delta","CPO","lp__"))
-
+  
   # Surfaces
   # Mean response
   f = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
@@ -240,24 +258,39 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   colnames(Delta_mean) = signif(c(0,10^unqX1),4)
   rownames(Delta_mean) = signif(c(0,10^unqX2),4)
   
-  
+  # Pull out posterior mean and add some stuff
   posterior_mean = as.list(rstan::summary(fit,pars=coef_names)$summary[,'mean'])
   posterior_mean$f = f_mean
   posterior_mean$p0 = p0_mean
   posterior_mean$Delta = Delta_mean
   
   data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID, units = units, indices = ii_obs)
-  model = list(type = type, lower_asymptotes = lower_asymptotes, method = method, heteroscedastic = heteroscedastic)
+  model = list(type = type, lower_asymptotes = lower_asymptotes, method = method, bayes_factor = bayes_factor, heteroscedastic = heteroscedastic)
   
   # If matern kernel, add value of nu
   if (type==3){
     model$nu = nu
   }
   
+  # Inspect residuals
+  residuals = y - as.vector(f_mean)[ii_obs]
+  # Pull out pointwise observation noise
+  point_sd = sqrt(posterior_mean$s^2*(f_mean[ii_obs]+lambda))
+  # If any residuals are outside 3*sd, user is alerted
+  if (sum(abs(residuals) > 3*point_sd) > 0){
+    res_msg = paste("Largest residuals from posterior mean is",signif(max(residuals),4),", which is more than three times the observation noise. This could indicate the presence of an outlier.")
+    warning(res_msg,call. = F)
+    returnCode = 1
+    messages = c(messages,res_msg)
+  }
+  
+  
+  
+  
   object = list(stanfit = fit, posterior_mean = posterior_mean, 
                 data = data, model = model, returnCode = returnCode,
                 LPML = LPML)
-  # Finally set some diagnostics
+  # Set some diagnostics
   object$divergent = NA
   if (returnCode){
     object$messages = messages
@@ -266,7 +299,16 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
     }
   }
   
+  # Calculate the Bayes Factor
+  if (bayes_factor){
+    message("Calculating the Bayes factor")
+    full = bridge_sampler(fit,silent=T)
+    no_interaction = bridge_sampler(fitH0,silent=T)
+    bfactor = bf(full,no_interaction)
+    object$bayesfactor = bfactor$bf
+  }
+  
+  
   class(object) <- "bayesynergy"
   return(object)
 }
-  
