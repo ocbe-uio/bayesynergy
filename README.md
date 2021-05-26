@@ -27,6 +27,7 @@ install_github('ocbe-uio/bayesynergy', build_vignettes = T, build_opts = c("--no
 
 
 ## Updates
+- 26-05-21: Updated to version 2.4.1, minor notation changes. Ability to calculate the Bayes Factor comparing models with and without interaction
 - 29-03-21: Updated to version 2.4, some minor tweaks to priors, default settings and plotting function. Added option to set hyperparameters of observation noise
 - 13-01-21: Updated to version 2.3, added new dataset for use with synergyscreen(), fixed bug with synergyscreen() filling up hard drive, added vignette
 - 01-12-20: Updated to version 2.2, added additional plotting functions for the synergyscreen() function, added a heteroscedastic setting for the noise term, + some minor improvements overall.
