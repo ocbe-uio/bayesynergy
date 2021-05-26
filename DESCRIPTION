@@ -1,7 +1,7 @@
 Package: bayesynergy
 Type: Package
 Title: Bayesian semi-parametric modelling for in-vitro drug combination experiments
-Version: 2.4
+Version: 2.4.1
 Date: 2021-03-29
 Author: Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Manuela Zucknick
 Maintainer: Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
