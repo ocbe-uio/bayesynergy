@@ -200,7 +200,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
       else {
         fit = rstan::sampling(stanmodels$gp_grid,stan_data, control = control, ...)
         if (bayes_factor){
-          fitH0 = rstan::sampling(stanmodels$nointeraction,stan_data_nointeraction, control = control,refresh=-1, ...)
+          fitH0 = rstan::sampling(stanmodels$nointeraction,stan_data_nointeraction, control = control, ...)
         }
       }
     } else if (method == "vb"){
