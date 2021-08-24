@@ -157,11 +157,11 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
     for (i in 1:length(unqX1)){
-      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_response[,i]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX2)), y = unqX2, z = z_response[,i]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     for (i in 1:length(unqX2)){
-      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_response[i,]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX1)), z = z_response[i,]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     
@@ -187,11 +187,11 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="grey",symbol=104), showlegend = F)
     for (i in 1:length(unqX1)){
-      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_p0[,i]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX2)), y = unqX2, z = z_p0[,i]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     for (i in 1:length(unqX2)){
-      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_p0[i,]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX1)), z = z_p0[i,]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     noninter_3d = fig
@@ -210,11 +210,11 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
                                               yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
     for (i in 1:length(unqX1)){
-      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_Delta[,i]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX2)), y = unqX2, z = z_Delta[,i]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     for (i in 1:length(unqX2)){
-      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_Delta[i,]+0.003, type="scatter3d", mode="lines",
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX1)), z = z_Delta[i,]+0.003, type="scatter3d", mode="lines",
                               showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
     }
     inter_3d = fig
