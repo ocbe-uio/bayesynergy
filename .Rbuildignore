@@ -4,3 +4,4 @@ Icon
 .travis.yml
 ^doc$
 ^Meta$
+.github
