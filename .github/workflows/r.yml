@@ -50,8 +50,15 @@ jobs:
         - name: Querying dependencies
           run: |
             install.packages('remotes')
-            saveRDS(remotes::dev_package_deps(dependencies = TRUE), ".github/depends.Rds", version = 2)
-            writeLines(sprintf("R-%i.%i", getRversion()$major, getRversion()$minor), ".github/R-version")
+            saveRDS(
+              remotes::dev_package_deps(dependencies = TRUE),
+              ".github/depends.Rds",
+              version = 2
+            )
+            writeLines(
+              sprintf("R-%i.%i", getRversion()$major, getRversion()$minor),
+              ".github/R-version"
+            )
           shell: Rscript {0}
 
         # Restoring R package cache ------------------------------ #
@@ -59,24 +66,23 @@ jobs:
           uses: actions/cache@v2
           with:
             path: ${{ env.R_LIBS_USER }}
-            key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-${{ hashFiles('.github/depends.Rds') }}
+            key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}>
+              -1-${{ hashFiles('.github/depends.Rds') }}
             restore-keys: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}-1-
 
-        # Installing system dependencies ------------------------- #
-        - name: Installing system dependencies
+        # Installing system and package dependencies ------------- #
+        - name: Installing Linux dependencies
           if: runner.os == 'Linux'
           run: |
             while read -r cmd
             do
               eval sudo $cmd
-            done < <(Rscript -e 'writeLines(remotes::system_requirements("ubuntu", "20.04"))')
-
-        # Installing macOS dependencies -------------------------- #
-        - name: Install X11 dependencies on MacOS
+            done < <(Rscript -e 'writeLines(
+              remotes::system_requirements("ubuntu", "20.04")
+            )')
+        - name: Install macOS dependencies
           if: runner.os == 'macOS'
           run: brew install xquartz --cask
-
-        # Installing package dependencies ------------------------ #
         - name: Installing package dependencies
           run: |
             remotes::install_deps(dependencies = TRUE)
@@ -89,7 +95,10 @@ jobs:
             _R_CHECK_CRAN_INCOMING_REMOTE_: false
           run: |
             options(crayon.enabled = TRUE)
-            rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "warning", check_dir = "check")
+            rcmdcheck::rcmdcheck(
+              args = c("--no-manual", "--as-cran"),
+              error_on = "warning", check_dir = "check"
+            )
           shell: Rscript {0}
 
         # Uploading check results -------------------------------- #
