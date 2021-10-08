@@ -1,10 +1,9 @@
 # bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments
 
-An R package for Bayesian semi-parametric modelling of in-vitro drug combination experiments 
+An R package for Bayesian semi-parametric modelling of in-vitro drug combination experiments
 
 [![DOI](https://zenodo.org/badge/192396008.svg)](https://zenodo.org/badge/latestdoi/192396008)
-[![Build Status](https://travis-ci.org/ocbe-uio/bayesynergy.svg?branch=master)](https://travis-ci.org/ocbe-uio/bayesynergy)
-
+[![Build Status](https://github.com/ocbe-uio/bayesynergy/workflows/R-CMD-check/badge.svg)](https://github.com/ocbe-uio/bayesynergy/actions)
 
 
 <img src="https://github.com/ocbe-uio/bayesynergy/blob/master/doc/workflow.png?raw=true" width="90%" align="center"></img>
@@ -14,7 +13,7 @@ The bayesynergy package implements a Bayesian semi-parametric model for the drug
 [Paper](https://doi.org/10.1093/bib/bbab251)
 
 ## Installation
-Prior to installing the package, please install [RStan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started), and make sure you can run the models there. Stan requires the configuration of a C++ toolchain, which can be tricky on some systems. 
+Prior to installing the package, please install [RStan](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started), and make sure you can run the models there. Stan requires the configuration of a C++ toolchain, which can be tricky on some systems.
 
 
 ```r

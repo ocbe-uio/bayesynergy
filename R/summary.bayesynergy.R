@@ -21,7 +21,7 @@
 
 summary.bayesynergy <- function(object,...){
   posterior = rstan::extract(object$stanfit)
-  coef_names = setdiff(names(posterior),c("C","p0","p01","p02","Delta","CPO","lp__",
+  coef_names = setdiff(names(posterior),c("C","p0","p01","p02","Delta","CPO","GP","lp__",
                                           "ec50_1", "ec50_2", "b1", "b2", 
                                           "theta_1", "theta_2", "z",
                                           "log_rVUS_f","log_rVUS_p0", "log_rVUS_Delta", "log_rVUS_syn", "log_rVUS_ant",
