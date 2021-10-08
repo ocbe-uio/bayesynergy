@@ -82,6 +82,7 @@ transformed parameters{
   row_vector<lower=0, upper=1>[n1] p01;      // Monotherapy drug 1
   vector<lower=0, upper=1>[n2] p02;          // Monotherapy drug 2
   matrix<lower=-1,upper=1>[n2,n1] Delta;     // Interaction
+  matrix[n2,n1] GP; // The GP itself
   
   {
     real la_1_param;
@@ -89,7 +90,7 @@ transformed parameters{
     
     
     
-    matrix[n2,n1] GP; // The GP itself
+    
     matrix[n2,n1] B; // Shorthand for what goes into g()
     
     // The kernel construction
