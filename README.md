@@ -22,6 +22,8 @@ library(devtools)
 install_github('ocbe-uio/bayesynergy', build_vignettes = T, build_opts = c("--no-resave-data", "--no-manual"))
 ```
 
+Note that for macOS, [XQuartz](https://www.xquartz.org/) must be installed for some of the plotting functions to work properly.
+
 ## Citation
 
 

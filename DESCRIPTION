@@ -2,7 +2,7 @@ Package: bayesynergy
 Type: Package
 Title: Bayesian semi-parametric modelling for in-vitro drug combination experiments
 Version: 2.4.1
-Date: 2021-03-29
+Date: 2022-09-01
 Author: Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Manuela Zucknick
 Maintainer: Leiv Rønneberg <leiv.ronneberg@medisin.uio.no>
 Description: The package implements a Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between different kernels for the definition of the covariance structure.
