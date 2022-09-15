@@ -26,9 +26,7 @@ Note that for macOS, [XQuartz](https://www.xquartz.org/) must be installed for s
 
 ## Citation
 
-
-Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Jorrit M Enserink, Manuela Zucknick, bayesynergy: flexible Bayesian modelling of synergistic interaction effects in <em>in vitro</em> drug combination experiments, <em>Briefings in Bioinformatics</em>, 2021;, bbab251, https://doi.org/10.1093/bib/bbab251
-
+Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Jorrit M Enserink, Manuela Zucknick, bayesynergy: flexible Bayesian modelling of synergistic interaction effects in <em>in vitro</em> drug combination experiments, <em>Briefings in Bioinformatics</em>, Volume 22, Issue 6, November 2021, bbab251, https://doi.org/10.1093/bib/bbab251
 
 
 ## Updates
