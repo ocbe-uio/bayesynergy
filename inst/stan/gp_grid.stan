@@ -7,7 +7,7 @@ functions{
   }
   real pc_prior(real ell, real sigmaf, real lambda1, real lambda2){
     // Custom lpdf for the PC prior of Matern covariance function
-    real d_half = 1.0/2.0;
+    real d_half = 2.0/2.0;
     real lprob = log(d_half) + log(lambda1) + log(lambda2) + (-d_half-1)*log(ell)-lambda1*pow(ell,-d_half)  - lambda2*sqrt(sigmaf) -log(sqrt(sigmaf));         ;
     return lprob;
   }
@@ -46,7 +46,7 @@ data {
 }
 transformed data{
   int N = (n1+n2+n1*n2+1)*nrep-nmissing;                  // Total number of observations
-  real d_half = 1.0/2.0;
+  real d_half = 2.0/2.0;
   real tauLPTN = inv_Phi((1+rho)/2);
   real lambdaLPTN = 2*inv(1-rho)*exp(normal_lpdf(tauLPTN | 0,1))*tauLPTN*log(tauLPTN);
   matrix[n1,n1] x1dist;
