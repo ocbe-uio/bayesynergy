@@ -15,7 +15,10 @@ bayesynergy(
   lower_asymptotes = T,
   heteroscedastic = T,
   bayes_factor = F,
-  noise_hypers = c(5, 1),
+  robust = F,
+  rho = 0.9,
+  pcprior = F,
+  pcprior_hypers = c(1, 0.1, 1, 0.2),
   lambda = 0.005,
   nu = 1.5,
   method = "sampling",
@@ -42,7 +45,13 @@ bayesynergy(
 
 \item{bayes_factor}{logical; if TRUE, the Bayes factor is computed between the full model, and a model containing only the non-interaction surface.}
 
-\item{noise_hypers}{vector of size 2; hyperparameters for the Inv-Gamma prior on the observation noise. The user can set these to reflect the variance in negative controls.}
+\item{robust}{logical: if TRUE, the model assumes a log-Pareto-tailed Normal (LPTN) distribution}
+
+\item{rho}{numeric: the rho hyperparameter for the robust likelihood distribution}
+
+\item{pcprior}{logical: if TRUE, the model uses a penalized complexity (PC) prior on the kernel hyperparameters of the Matérn kernel (type=3)}
+
+\item{pcprior_hypers}{vector of size 4 giving hyperparameters for the PC prior on Matérn hyperparameters}
 
 \item{lambda}{numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.}
 

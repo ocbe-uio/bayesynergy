@@ -1,9 +1,9 @@
 #' Function for fitting high-througput drug combination screens with parallel processing
-#' 
-#' @description 
+#'
+#' @description
 #' The function \code{synergyscreen} allows the fitting of high-throughput drug combination screens through parallel processing
-#' 
-#'    
+#'
+#'
 #' @param experiments A list of experiments obtained from a high-throughput screen. See *Details* for more information on the structure of each element.
 #' @param return_samples logical; if TRUE, the function returns the full fitted \code{\link[bayesynergy]{bayesynergy}} object.
 #' @param save_raw logical; if TRUE, the raw bayesynergy object is saved for each individual experiment.
@@ -14,8 +14,8 @@
 #' @param max_retries integer; the maximum number of retries utilized in model fit.
 #' @param plot_params list; parameters to be passed to the plotting function. See \link{plot.bayesynergy} for details.
 #' @param bayesynergy_params list; parameters to be passed to the bayesynergy function. See \link{bayesynergy} for details.
-#'  
-#' 
+#'
+#'
 #' @details
 #' The elements of \strong{experiments} must themselves be lists with the following elements
 #' \tabular{ll}{
@@ -25,25 +25,25 @@
 #' experiment_ID: \tab string denoting the unique experiment ID, e.g. cell line name.
 #' units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' }
-#' 
+#'
 #' @return A list containing two elements
 #' \tabular{ll}{
 #' screenSummary \tab data frame, posterior summary statistics for each experiment. \cr
 #' failed \tab A list containing elements experiments that failed to process. \cr
 #' screenSamples \tab if requested, a list containing the fitted \code{\link[bayesynergy]{bayesynergy}} object for each experiment.
 #' }
-#' 
-#' 
+#'
+#'
 #'
 #' @examples
 #' \dontrun{
 #' library(bayesynergy)
 #' data("mathews_DLBCL")
-#' experiment1 = list(y = mathews_DLBCL[[1]][[1]], 
-#' x = mathews_DLBCL[[1]][[2]], 
+#' experiment1 = list(y = mathews_DLBCL[[1]][[1]],
+#' x = mathews_DLBCL[[1]][[2]],
 #' drug_names = c("ispinesib","ibrutinib"))
-#' experiment2 = list(y = mathews_DLBCL[[2]][[1]], 
-#' x = mathews_DLBCL[[2]][[2]], 
+#' experiment2 = list(y = mathews_DLBCL[[2]][[1]],
+#' x = mathews_DLBCL[[2]][[2]],
 #' drug_names = c("canertinib","ibrutinib"))
 #' experiments = list(experiment1,experiment2)
 #' fit <- synergyscreen(experiments)
@@ -63,35 +63,34 @@ synergyscreen = function(experiments, return_samples = F,
   if (is.null(path)){
     path <- getwd()
   }
-  
+
   # Default max cores
   if (is.null(max_cores)){
     max_cores <- min(length(experiments),min(max_cores, parallel::detectCores() - 1))
   } else { # Overwrite on user input if allowed
     max_cores = min(max_cores, parallel::detectCores())
   }
-  
+
   # Check that path exists, if not create it
   if (!dir.exists(path)){
     dir.create(path)
   }
   # Put dirmark on file path
   path = Sys.glob(path,dirmark = T)
-  
+
   # Telling the user where things are being saved
   if (save_raw | save_plots){
     print(paste("Saving output at:",path))
   }
-  
+
   # We need to check that bayesyn_params contain some parameters
   if (!("control" %in% names(bayesynergy_params))){
     bayesynergy_params$control = list()
-  } 
+  }
   # Set default method to vb for computational speed
   if (!("method" %in% names(bayesynergy_params))){
     bayesynergy_params$method = "vb"
   }
-  
   # Finally, if we are re-running failed experiments
   rerun = F
   oldrun = c()
@@ -102,7 +101,7 @@ synergyscreen = function(experiments, return_samples = F,
       rerun = T
     } else (stop("No failed experiments found"))
   }
-  
+
   # Create container for results
   results = c()
   if (parallel){
@@ -112,8 +111,8 @@ synergyscreen = function(experiments, return_samples = F,
     if (nzchar(chk) && chk == "TRUE") {
       # use 2 cores in CRAN/Travis/AppVeyor
       max_cores <- 2L
-    } 
-    
+    }
+
     print(paste("Using",max_cores,"cores for parallel run on list of size",length(experiments)))
     cl = parallel::makeCluster(max_cores,setup_strategy = "sequential")
     registerDoSNOW(cl)
@@ -157,7 +156,7 @@ synergyscreen = function(experiments, return_samples = F,
                                    error = function(e){fit$returnCode <<- 2}
                                  )
                                }
-                             } else if (bayesynergy_params$method == "vb"){ 
+                             } else if (bayesynergy_params$method == "vb"){
                                # For VB, we simply need to try again if the previous one gave an error
                                # or clearly has a terrible fit
                                if ((fit$returnCode == 2) || (fit$posterior_mean$s > 1)){
@@ -170,8 +169,8 @@ synergyscreen = function(experiments, return_samples = F,
                              retries = retries + 1
                              if (retries > max_retries){retry = F}
                            }
-                           
-                           
+
+
                            if (fit$returnCode != 2){
                              # Saving raw
                              if (save_raw){
@@ -181,7 +180,7 @@ synergyscreen = function(experiments, return_samples = F,
                              if (save_plots){
                                suppressMessages(do.call(plot,c(list(x=fit,save_plots = T, path=path), plot_params)))
                              }
-                             
+
                              # Create some summaries
                              summaryStats = rstan::summary(fit$stanfit)$summary
                              synMetrics <- data.frame(
@@ -204,7 +203,7 @@ synergyscreen = function(experiments, return_samples = F,
                                `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
                                `Interaction (mean)` = summaryStats["VUS_Delta","mean"],
                                `Interaction (sd)` = summaryStats["VUS_Delta","sd"],
-                               
+
                                # Calculate standardized scores for comparisons
                                `Synergy Score` = summaryStats["VUS_syn","mean"]/summaryStats["VUS_syn","sd"],
                                `Antagonism Score` = summaryStats["VUS_ant","mean"]/summaryStats["VUS_ant","sd"],
@@ -212,7 +211,7 @@ synergyscreen = function(experiments, return_samples = F,
                                `s` = summaryStats["s", "mean"],
                                `returnCode` = fit$returnCode,
                                `divergentTransitions` = sum(fit$divergent),
-                               
+
                                check.names = FALSE, stringsAsFactors = FALSE)
                              if (fit$model$bayes_factor){
                                synMetrics$`Bayes Factor` = fit$bayesfactor
@@ -240,7 +239,7 @@ synergyscreen = function(experiments, return_samples = F,
                                `Non-interaction Efficacy (sd)` = NA,
                                `Interaction (mean)` = NA,
                                `Interaction (sd)` = NA,
-                               
+
                                # Calculate standardized scores for comparisons
                                `Synergy Score` = NA,
                                `Antagonism Score` = NA,
@@ -248,19 +247,19 @@ synergyscreen = function(experiments, return_samples = F,
                                `s` = NA,
                                `returnCode` = 2,
                                `divergentTransitions` = NA,
-                               
+
                                check.names = FALSE, stringsAsFactors = FALSE)
                              if (fit$model$bayes_factor){
                                synMetrics$`Bayes Factor` = NA
                              }
                            }
                          })
-                         
+
                          # Garbage collection
                          dir <- tempdir()
                          file.names <- list.files(path = dir, pattern="*.csv")
                          unlink(paste0(dir,"/",file.names))
-                         
+
                          # Return
                          if (return_samples & synMetrics[,"returnCode"] != 2){
                            list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID,fit=fit)
@@ -301,7 +300,7 @@ synergyscreen = function(experiments, return_samples = F,
                 error = function(e){fit$returnCode <<- 2}
               )
             }
-          } else if (bayesynergy_params$method == "vb"){ 
+          } else if (bayesynergy_params$method == "vb"){
             # For VB, we simply need to try again if the previous one gave an error
             # or clearly has a terrible fit
             if ((fit$returnCode == 2) || (fit$posterior_mean$s > 1)){
@@ -314,8 +313,8 @@ synergyscreen = function(experiments, return_samples = F,
           retries = retries + 1
           if (retries > max_retries){retry = F}
         }
-        
-        
+
+
         if (fit$returnCode != 2){
           # Saving raw
           if (save_raw){
@@ -325,7 +324,7 @@ synergyscreen = function(experiments, return_samples = F,
           if (save_plots){
             suppressMessages(do.call(plot,c(list(x=fit,save_plots = T, path=path), plot_params)))
           }
-          
+
           # Create some summaries
           summaryStats = rstan::summary(fit$stanfit)$summary
           synMetrics <- data.frame(
@@ -348,7 +347,7 @@ synergyscreen = function(experiments, return_samples = F,
             `Non-interaction Efficacy (sd)` = summaryStats["rVUS_p0","sd"],
             `Interaction (mean)` = summaryStats["VUS_Delta","mean"],
             `Interaction (sd)` = summaryStats["VUS_Delta","sd"],
-            
+
             # Calculate standardized scores for comparisons
             `Synergy Score` = summaryStats["VUS_syn","mean"]/summaryStats["VUS_syn","sd"],
             `Antagonism Score` = summaryStats["VUS_ant","mean"]/summaryStats["VUS_ant","sd"],
@@ -356,12 +355,12 @@ synergyscreen = function(experiments, return_samples = F,
             `s` = summaryStats["s", "mean"],
             `returnCode` = fit$returnCode,
             `divergentTransitions` = sum(fit$divergent),
-            
+
             check.names = FALSE, stringsAsFactors = FALSE)
           if (fit$model$bayes_factor){
             synMetrics$`Bayes Factor` = fit$bayesfactor
           }
-          
+
         } else {
           # Create some summaries
           summaryStats = rstan::summary(fit$stanfit)$summary
@@ -385,7 +384,7 @@ synergyscreen = function(experiments, return_samples = F,
             `Non-interaction Efficacy (sd)` = NA,
             `Interaction (mean)` = NA,
             `Interaction (sd)` = NA,
-            
+
             # Calculate standardized scores for comparisons
             `Synergy Score` = NA,
             `Antagonism Score` = NA,
@@ -393,26 +392,26 @@ synergyscreen = function(experiments, return_samples = F,
             `s` = NA,
             `returnCode` = 2,
             `divergentTransitions` = NA,
-            
+
             check.names = FALSE, stringsAsFactors = FALSE)
           if (fit$model$bayes_factor){
             synMetrics$`Bayes Factor` = NA
           }
         }
       })
-      
+
       # Garbage collection
       dir <- tempdir()
       file.names <- list.files(path = dir, pattern="*.csv")
       unlink(paste0(dir,"/",file.names))
-    
+
       #Return
       if (return_samples){
         results[[i]] = list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID,fit=fit)
       } else {results[[i]] = list(summaries = synMetrics, drug_names = data$drug_names, experiment_ID=data$experiment_ID)}
     }
   }
-  
+
   # Combine and reorder some stuff
   toReturn = list()
   screenSummary = do.call(rbind,lapply(results,function(x) x$summaries))
@@ -423,14 +422,14 @@ synergyscreen = function(experiments, return_samples = F,
   }
   # Set those with too high noise as returnCode 2
   toReturn$screenSummary[which(toReturn$screenSummary[,"s"] > 1), "returnCode"] = 2
-  
+
   # Then remove all with returnCode 2
   toReturn$screenSummary = toReturn$screenSummary[which(!(toReturn$screenSummary[,"returnCode"] == 2)),]
-  
+
   # Do some checks to see if things converges okay
-  
+
   propFailed = mean((toReturn$screenSummary[,"returnCode"]>0),na.rm = T)
- 
+
   if (propFailed > 0){
     if (bayesynergy_params$method == "sampling"){
       warning(paste0(round(100*propFailed,digits=2),"% of experiments returned a warning or error -- check these."))
@@ -443,22 +442,22 @@ synergyscreen = function(experiments, return_samples = F,
     diff = length(experiments) - sum((toReturn$screenSummary[,"returnCode"]!=2))
     warning(paste(diff," experiment(s) failed to process"))
   }
-  
+
   # Pick out failed experiments and put in list
   failedID = unique(c(setdiff(1:length(experiments),toReturn$screenSummary$`listID`),which(toReturn$screenSummary[,"returnCode"]==2)))
   failedExperiments = experiments[failedID]
   if (length(failedID>0)){
     toReturn$failed = failedExperiments
   }
-  
+
   # Finally, if we are re-running, the new runs are combined with the old
   if (rerun){
     toReturn$screenSummary = rbind(oldrun,toReturn$screenSummary)
   }
-  
+
   # Returning
   class(toReturn) <- "synergyscreen"
   return(toReturn)
-  
+
 }
 

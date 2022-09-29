@@ -5,6 +5,24 @@ functions{
     // A is n1 x n1, B = n2 x n2, V = n2 x n1 = reshape(v,n2,n1)
     return transpose(A * transpose(B * V));
   }
+  real pc_prior(real ell, real sigmaf, real lambda1, real lambda2){
+    // Custom lpdf for the PC prior of Matern covariance function
+    real d_half = 1.0/2.0;
+    real lprob = log(d_half) + log(lambda1) + log(lambda2) + (-d_half-1)*log(ell)-lambda1*pow(ell,-d_half)  - lambda2*sqrt(sigmaf) -log(sqrt(sigmaf));         ;
+    return lprob;
+  }
+  real lptn(real rho, real z, real lambda, real tau){
+    if (fabs(z) <= tau){
+      return normal_lpdf(z | 0, 1);
+    }
+    else {
+      real logt = log(tau);
+      real logl = log(lambda);
+      real logabsz = log(fabs(z));
+      real lpdf = normal_lpdf(tau | 0, 1) + logt - logabsz + (lambda+1)*log(logt/logabsz);
+      return lpdf;
+    }
+  }
 }
 data {
   int<lower=1> n1;                                        // No. of concentrations for drug 1
@@ -16,9 +34,11 @@ data {
   real x1[n1];                                            // Concentrations of drug 1
   real x2[n2];                                            // Concentrations of drug 2
   int est_la;                                             // Boolean, estimating lower-asymptotes?
-  // int est_delta;                                          // Boolean, estimating Delta(x)?
+  int robust;                                             // Boolean, using mixture likelihood?
+  int pcprior;                                            // Boolean, using PC prior for Matern covariance?
   int heteroscedastic;                                    // Boolean, are we assuming heteroscedastic measurement error?
-  vector[2] noise_hypers;                                 // Hyperparameters for observation noise
+  vector[4] pcprior_hypers;                               // Hyperparameters for the PC prior
+  real rho;                                               // Hyperparameter for LPTN
   real lambda;                                            // Real, standard deviation ratio between positive and negative controls
   int kernel;                                             // Indicator, which kernel are we using?
   int nu_matern;                                          // Specification of nu parameter for matern kernel
@@ -26,11 +46,16 @@ data {
 }
 transformed data{
   int N = (n1+n2+n1*n2+1)*nrep-nmissing;                  // Total number of observations
+  real d_half = 1.0/2.0;
+  real tauLPTN = inv_Phi((1+rho)/2);
+  real lambdaLPTN = 2*inv(1-rho)*exp(normal_lpdf(tauLPTN | 0,1))*tauLPTN*log(tauLPTN);
   matrix[n1,n1] x1dist;
   matrix[n2,n2] x2dist;
   matrix[n1,n1] x1dist_squared;
   matrix[n2,n2] x2dist_squared;
-  
+  real lambda1 = -log(pcprior_hypers[2])*pow(pcprior_hypers[1],d_half);
+  real lambda2 = -log(pcprior_hypers[4])*pow(pcprior_hypers[3],-1);
+
   // Pairwise distances for kernel creation
   for (i in 1:n1){
     for (j in i:n1){
@@ -59,23 +84,22 @@ parameters {
   real theta_2;
   real<lower=0> slope_1;
   real<lower=0> slope_2;
-  
+
   // For Interaction transformation
   real<lower=0> b1;
   real<lower=0> b2;
-  
+
   // For the GP
   real<lower=0> ell;
   real<lower=0> sigma_f;
   real<lower=0> alpha[est_alpha ? 1 : 0];
   matrix[n2,n1] z;
-  
-  
+
+
   // Variances
   real<lower=0> s;
   real<lower=0> s2_log10_ec50_1;
   real<lower=0> s2_log10_ec50_2;
-  
 }
 transformed parameters{
   matrix<lower=0, upper=1>[n2,n1] p0;        // Non-interaction
@@ -83,16 +107,16 @@ transformed parameters{
   vector<lower=0, upper=1>[n2] p02;          // Monotherapy drug 2
   matrix<lower=-1,upper=1>[n2,n1] Delta;     // Interaction
   matrix[n2,n1] GP; // The GP itself
-  
+
   {
     real la_1_param;
     real la_2_param;
-    
-    
-    
-    
+
+
+
+
     matrix[n2,n1] B; // Shorthand for what goes into g()
-    
+
     // The kernel construction
     matrix[n1,n1] cov1;
     matrix[n2,n2] cov2;
@@ -131,7 +155,7 @@ transformed parameters{
     L_cov1 = cholesky_decompose(cov1);
     L_cov2 = cholesky_decompose(cov2);
     GP = kron_mvprod(L_cov1,L_cov2,z);
-    
+
     if (est_la){
       la_1_param = la_1[1];
       la_2_param = la_2[1];
@@ -139,7 +163,7 @@ transformed parameters{
       la_1_param = 0;
       la_2_param = 0;
     }
-    
+
     for (j in 1:n1){
       p01[j] = la_1_param+(1-la_1_param)/(1+10^(slope_1*(x1[j]-log10_ec50_1)));
       for (i in 1:n2){
@@ -160,15 +184,14 @@ model {
   f[1,2:(n1+1)] = p01;                      // At (.,0) dose response is mono1
   f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
   f[2:(n2+1),2:(n1+1)] = p0 + Delta;      // At the interior, dose response is non-interaction + interaction
-  
-  
+
+
   // Variances
-  
-  target += inv_gamma_lpdf(s | noise_hypers[1],noise_hypers[2]);
+  target += cauchy_lpdf(s | 0, 1);
   target += inv_gamma_lpdf(s2_log10_ec50_1 | 3,2);
   target += inv_gamma_lpdf(s2_log10_ec50_2 | 3,2);
-  
-  
+
+
   // Monotherapies
   target += beta_lpdf(la_1 | 1,1.25);
   target += beta_lpdf(la_2 | 1,1.25);
@@ -178,26 +201,46 @@ model {
   target += std_normal_lpdf(theta_2);
   target += normal_lpdf(log10_ec50_1 | theta_1,sqrt(s2_log10_ec50_1));
   target += normal_lpdf(log10_ec50_2 | theta_2,sqrt(s2_log10_ec50_2));
-  
+
   // Interaction transformation
   target += normal_lpdf(b1 | 1,0.1);
   target += normal_lpdf(b2 | 1,0.1);
-  
+
   // Interaction
-  target += inv_gamma_lpdf(ell | 5,5);
-  target += lognormal_lpdf(sigma_f | 1,1);
+  if (pcprior){
+    target += pc_prior(ell,sigma_f,lambda1,lambda2);
+
+  } else{
+    target += inv_gamma_lpdf(ell | 5,5);
+    target += lognormal_lpdf(sigma_f | 1,1);
+  }
+
   if (est_alpha){
     target += gamma_lpdf(alpha | 1,1);
   }
   target += std_normal_lpdf(to_vector(z));
-  
+
   // Response
   fobs = to_vector(f)[ii_obs];
   noise = s*sqrt((fobs+lambda));
   if (heteroscedastic){
-    target += normal_lpdf(y | fobs,noise);
+    if (robust){
+      for (n in 1:N) {
+        target += lptn(rho,(y[n]-fobs[n])/noise[n],lambdaLPTN,tauLPTN) - log(noise[n]);
+      }
+    } else{
+      target += normal_lpdf(y | fobs,noise);
+    }
+
   } else{
-    target += normal_lpdf(y | fobs,s);
+    if (robust){
+      for (n in 1:N) {
+        target += lptn(rho,(y[n]-fobs[n])/s,lambdaLPTN,tauLPTN) - log(s);
+      }
+    } else{
+      target += normal_lpdf(y | fobs,s);
+    }
+
   }
 }
 generated quantities {
@@ -211,8 +254,8 @@ generated quantities {
   real VUS_Delta = 0;                        // Overall interaction
   real VUS_syn = 0;                          // Synergy
   real VUS_ant = 0;                          // Antagonism
-  
-  
+
+
   {
     matrix[n2+1,n1+1] f;                      // The dose-response function
     matrix[n2,n1] fc_interior;                // The complement of dose-response function interior
@@ -235,8 +278,8 @@ generated quantities {
     f[2:(n2+1),1] = p02;                      // At (0,.) dose response is mono2
     f[2:(n2+1),2:(n1+1)] = p0 + Delta;      // At the interior, dose response is non-interaction + interaction
     fc_interior[1:n2,1:n1] = 1 - (p0 + Delta);// At the interior, dose response is non-interaction + interaction
-    
-    
+
+
     // Calculating CPO
     fobs = to_vector(f)[ii_obs];
     noise = s*sqrt((fobs+lambda));
@@ -262,7 +305,7 @@ generated quantities {
     dss_1 = 100 * (1-dss_1/(c12-c11)); // Normalizing
     dss_2 = (c22-c21)+(la_2_param-1)/slope_2*(log10(1+10^(slope_2*(c22-log10_ec50_2))) - log10(1+10^(slope_2*(c21-log10_ec50_2))));
     dss_2 = 100 * (1-dss_2/(c22-c21)); // Normalizing
-    
+
     // Calculating drug combination scores
     for (i in 1:n2){
       real b_rVUS = 0;
@@ -278,7 +321,7 @@ generated quantities {
         b_ant += (x1[j]-x1[(j-1)])*(fmax(Delta[i,j],0)+fmax(Delta[i,(j-1)],0))/2;
       }
       B_rVUS[i] = b_rVUS;
-      B_rVUS_p0[i] = b_rVUS_p0; 
+      B_rVUS_p0[i] = b_rVUS_p0;
       B_Delta[i] = b_Delta;
       B_syn[i] = b_syn;
       B_ant[i] = b_ant;

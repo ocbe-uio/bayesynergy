@@ -146,7 +146,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
                             type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="black",symbol=104),name = "Observed")
     fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
-                                                   title="% Viability",titlefont = list(size = 12)),
+                                                   title="Viability",titlefont = list(size = 12)),
                                               xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
                                               yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Response surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
@@ -176,7 +176,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
                             type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="black",symbol=104), name = "Observed")
     fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
-                                                  title="% Viability",titlefont = list(size = 12)),
+                                                  title="Viability",titlefont = list(size = 12)),
                                               xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
                                               yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
                          title = paste("Non-interaction surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
@@ -204,7 +204,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$residuals,
                             type = "scatter3d", mode = "markers",
                             marker = list(size=3,color="black",symbol=104), name = "y - p<sub>0</sub>", showlegend = T)
-    fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(-1,1),
+    fig = fig %>% plotly::layout(scene = list(zaxis= list(range=c(min(-1,min(combination$residuals)),max(1,max(combination$residuals))),
                                                   title="Interaction",titlefont = list(size = 12)),
                                               xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
                                               yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
@@ -222,26 +222,49 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
   }
 
   # Plotting monotherapies
+  if (x$model$robust){
+    p1 = ggplot(data = df1, mapping = aes(x, median)) +
+      geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
+      geom_point(data = mono1, mapping = aes(x,y), na.rm = T) +
+      geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+      ylim(min(-0.5,min(mono1$y)),max(1.5,max(mono1$y))) +
+      labs(x = bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")"), y = "Viability",
+           title = paste("Monotherapy:",x$data$drug_names[1]),
+           subtitle = paste0(x$data$experiment_ID)) +
+      scale_x_continuous(labels = math_format(10^.x))
 
-  p1 = ggplot(data = df1, mapping = aes(x, mean)) +
-    geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
-    geom_point(data = mono1, mapping = aes(x,y), na.rm = T) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-    ylim(min(-0.5,min(mono1$y)),max(1.5,max(mono1$y))) +
-    labs(x = bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")"), y = "% Viability",
-         title = paste("Monotherapy:",x$data$drug_names[1]),
-         subtitle = paste0(x$data$experiment_ID)) +
-    scale_x_continuous(labels = math_format(10^.x))
+    p2 = ggplot(data = df2, mapping = aes(x, median)) +
+      geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
+      geom_point(data = mono2, mapping = aes(x,y), na.rm = T) +
+      geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+      ylim(min(-0.5,min(mono2$y)),max(1.5,max(mono2$y))) +
+      labs(x = bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")"), y = "Viability",
+           title = paste("Monotherapy:",x$data$drug_names[2]),
+           subtitle = paste0(x$data$experiment_ID)) +
+      scale_x_continuous(labels = math_format(10^.x))
+  } else {
+    p1 = ggplot(data = df1, mapping = aes(x, mean)) +
+      geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
+      geom_point(data = mono1, mapping = aes(x,y), na.rm = T) +
+      geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+      ylim(min(-0.5,min(mono1$y)),max(1.5,max(mono1$y))) +
+      labs(x = bquote(.(x$data$units[1])~" ("~.(x$data$drug_names[1])~")"), y = "Viability",
+           title = paste("Monotherapy:",x$data$drug_names[1]),
+           subtitle = paste0(x$data$experiment_ID)) +
+      scale_x_continuous(labels = math_format(10^.x))
 
-  p2 = ggplot(data = df2, mapping = aes(x, mean)) +
-    geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
-    geom_point(data = mono2, mapping = aes(x,y), na.rm = T) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-    ylim(min(-0.5,min(mono2$y)),max(1.5,max(mono2$y))) +
-    labs(x = bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")"), y = "% Viability",
-         title = paste("Monotherapy:",x$data$drug_names[2]),
-         subtitle = paste0(x$data$experiment_ID)) +
-    scale_x_continuous(labels = math_format(10^.x))
+    p2 = ggplot(data = df2, mapping = aes(x, mean)) +
+      geom_smooth(stat = "identity", aes(ymin = lower, ymax = upper)) +
+      geom_point(data = mono2, mapping = aes(x,y), na.rm = T) +
+      geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+      ylim(min(-0.5,min(mono2$y)),max(1.5,max(mono2$y))) +
+      labs(x = bquote(.(x$data$units[2])~" ("~.(x$data$drug_names[2])~")"), y = "Viability",
+           title = paste("Monotherapy:",x$data$drug_names[2]),
+           subtitle = paste0(x$data$experiment_ID)) +
+      scale_x_continuous(labels = math_format(10^.x))
+  }
+
+
 
 
   ####################################################################################
