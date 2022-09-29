@@ -30,7 +30,7 @@ Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Jorrit M Enserink, Manuela Zuck
 
 
 ## Updates
-- 29-09-22: Updated to version 2.5. Added a new 'robust' likelihood, which should be less sensitive to outliers, particularly when combined with the new penalized complexity (PC) prior for the Matérn kernel hyperparameters. Finally, changed the default prior for the global noise term from an Inverse-gamma, to a half-Caucy.
+- 29-09-22: Updated to version 2.5. Added a new 'robust' likelihood, which should be less sensitive to outliers, particularly when combined with the new penalized complexity (PC) prior for the Matérn kernel hyperparameters. Finally, changed the default prior for the global noise term from an Inverse-gamma, to a half-Cauchy.
 - 26-05-21: Updated to version 2.4.1, minor notation changes. Ability to calculate the Bayes Factor comparing models with and without interaction
 - 29-03-21: Updated to version 2.4, some minor tweaks to priors, default settings and plotting function. Added option to set hyperparameters of observation noise
 - 13-01-21: Updated to version 2.3, added new dataset for use with synergyscreen(), fixed bug with synergyscreen() filling up hard drive, added vignette
