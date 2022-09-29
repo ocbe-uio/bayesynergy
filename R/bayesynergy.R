@@ -287,7 +287,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID, units = units, indices = ii_obs)
   model = list(type = type, lower_asymptotes = lower_asymptotes, method = method,
                bayes_factor = bayes_factor, heteroscedastic = heteroscedastic,
-               robust = robust, pcprior = pcprior)
+               robust = robust, pcprior = pcprior, lambda = lambda)
 
   # If matern kernel, add value of nu
   if (type==3){

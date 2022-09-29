@@ -86,7 +86,7 @@ pc_prior(const T0__& ell,
         (void) d_half;  // dummy to suppress unused var warning
         stan::math::initialize(d_half, DUMMY_VAR__);
         stan::math::fill(d_half, DUMMY_VAR__);
-        stan::math::assign(d_half,(1.0 / 2.0));
+        stan::math::assign(d_half,(2.0 / 2.0));
         current_statement_begin__ = 11;
         local_scalar_t__ lprob(DUMMY_VAR__);
         (void) lprob;  // dummy to suppress unused var warning
@@ -378,7 +378,7 @@ public:
             current_statement_begin__ = 49;
             d_half = double(0);
             stan::math::fill(d_half, DUMMY_VAR__);
-            stan::math::assign(d_half,(1.0 / 2.0));
+            stan::math::assign(d_half,(2.0 / 2.0));
             current_statement_begin__ = 50;
             tauLPTN = double(0);
             stan::math::fill(tauLPTN, DUMMY_VAR__);

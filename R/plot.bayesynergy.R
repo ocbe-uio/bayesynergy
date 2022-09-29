@@ -124,6 +124,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     median = apply(y.seq1,1,median),
     lower = apply(y.seq1,1,quantile, probs=0.025),
     upper = apply(y.seq1,1,quantile, probs=0.975)
+    # clower = apply(y.seq1,1,mean)-1.96*sqrt(mean(posterior$s)^2*(apply(y.seq1,1,mean)+x$model$lambda)),
+    # cupper = apply(y.seq1,1,mean)+1.96*sqrt(mean(posterior$s)^2*(apply(y.seq1,1,mean)+x$model$lambda))
   )
   df2 = data.frame(
     x = x.seq2,
@@ -131,6 +133,8 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
     median = apply(y.seq2,1,median),
     lower = apply(y.seq2,1,quantile, probs=0.025),
     upper = apply(y.seq2,1,quantile, probs=0.975)
+    # clower = apply(y.seq2,1,mean)-1.96*sqrt(mean(posterior$s)^2*(apply(y.seq2,1,mean)+x$model$lambda)),
+    # cupper = apply(y.seq2,1,mean)+1.96*sqrt(mean(posterior$s)^2*(apply(y.seq2,1,mean)+x$model$lambda))
   )
 
   # #################################
