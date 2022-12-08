@@ -13,13 +13,14 @@ functions{
   }
   real lptn(real rho, real z, real lambda, real tau){
     if (fabs(z) <= tau){
-      return normal_lpdf(z | 0, 1);
+      return (-z^2/2);
     }
     else {
       real logt = log(tau);
       real logl = log(lambda);
-      real logabsz = log(fabs(z));
-      real lpdf = normal_lpdf(tau | 0, 1) + logt - logabsz + (lambda+1)*log(logt/logabsz);
+      // real logabsz = log(fabs(z));
+      real logabsz = log(fmax(fabs(z),1.0001)); // Small hack to avoid numeric instability in next line
+      real lpdf = (-tau^2/2) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
       return lpdf;
     }
   }
@@ -188,6 +189,7 @@ model {
 
   // Variances
   target += cauchy_lpdf(s | 0, 1);
+  // target += inv_gamma_lpdf(s | 5, 1);
   target += inv_gamma_lpdf(s2_log10_ec50_1 | 3,2);
   target += inv_gamma_lpdf(s2_log10_ec50_2 | 3,2);
 

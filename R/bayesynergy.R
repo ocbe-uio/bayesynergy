@@ -108,6 +108,11 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
   if (type != 1){
     control.default = list(adapt_delta = 0.9)
   }
+  # Robust models need jittering on step size
+  if (robust){
+    control.default$stepsize_jitter = 0.5
+    control.default$metric = "dense_e"
+  }
   control = modifyList(control.default,control)
   # Setting default names for drugs and experimentID
   if (is.null(drug_names)){
@@ -218,10 +223,10 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
       }
     } else if (method == "vb"){
       if (type==1){
-        fit = rstan::vb(stanmodels$splines,stan_data, ...)
+        fit = rstan::vb(stanmodels$splines,stan_data, algorithm = "fullrank", ...)
       }
       else {
-        fit = rstan::vb(stanmodels$gp_grid,stan_data, ...)
+        fit = rstan::vb(stanmodels$gp_grid,stan_data, algorithm = "fullrank", ...)
       }
     } else if (method == "opt"){
       if (type==1){
