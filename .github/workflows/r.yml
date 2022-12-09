@@ -44,7 +44,7 @@ jobs:
 
         # Installing Pandoc -------------------------------------- #
         - name: Installing Pandoc
-          uses: r-lib/actions/setup-pandoc@v1
+          uses: r-lib/actions/setup-pandoc@v2
 
         # Querying dependencies ---------------------------------- #
         - name: Querying dependencies
