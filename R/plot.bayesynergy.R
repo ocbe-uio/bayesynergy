@@ -28,7 +28,6 @@
 #' @importFrom plotly plot_ly add_surface add_trace %>% plotly_build as_widget add_paths
 #' @importFrom scales math_format
 #' @importFrom gridExtra grid.arrange
-#' @importFrom inlmisc GetColors
 #' @importFrom grDevices dev.off
 #' @importFrom Cairo CairoPNG CairoPDF
 #' @importFrom stats quantile
@@ -330,7 +329,10 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
 
 
   #Interaction surface has a different color scale
-  Delta_col_palette <- inlmisc::GetColors(scheme = "sunset")
+  # Delta_col_palette <- inlmisc::GetColors(scheme = "sunset")
+  Delta_col_palette <- c("#354B99", "#4062A8", "#4A7AB7", "#5D90C2", "#6DA5CC", "#83B8D7", "#98CAE0",
+                         "#ACD6E7", "#C2E3EE", "#D7E7DD", "#EAEBCC", "#F5E3AB", "#FED98B", "#FEC678",
+                         "#FDB366", "#FA9958", "#F57D4A", "#EA603B", "#DC3D2D", "#C0242A", "#A50026")
   # Breaks
   eps = 0.05
   breaks = c(seq(-1,-0.1,by=0.1),0-eps,0+eps,seq(0.1,1,by=0.1))
@@ -348,7 +350,7 @@ plot.bayesynergy <- function(x, plot3D = T, save_plots = FALSE, path = NULL, plo
                         colour="dark grey", size=.5, linetype = "dashed") +
     geom_point(aes(x = x1, y = x2),combination, color = "black", alpha = 0.1, size = 2,
                shape = 4) +
-    scale_fill_manual(values=Delta_col_palette(21), labels = breaklabel(21,breaks),
+    scale_fill_manual(values=Delta_col_palette, labels = breaklabel(21,breaks),
                       name="% Interaction", drop = FALSE) +
     scale_x_continuous(expand=c(0,0),labels = math_format(10^.x)) +
     scale_y_continuous(expand=c(0,0),labels = math_format(10^.x)) +
