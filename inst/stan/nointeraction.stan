@@ -2,14 +2,16 @@
 functions{
   real lptn(real rho, real z, real lambda, real tau){
     if (fabs(z) <= tau){
-      return (-z^2/2);
+      // return (-z^2/2);
+      return std_normal_lpdf(z);
     }
     else {
       real logt = log(tau);
       real logl = log(lambda);
       // real logabsz = log(fabs(z));
       real logabsz = log(fmax(fabs(z),1.0001)); // Small hack to avoid numeric instability in next line
-      real lpdf = (-tau^2/2) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
+      // real lpdf = (-tau^2/2) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
+      real lpdf = std_normal_lpdf(tau) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
       return lpdf;
     }
   }
@@ -90,7 +92,7 @@ model {
   f[2:(n2+1),2:(n1+1)] = p0;              // At the interior, dose response is non-interaction
 
   // Variances
-  target += cauchy_lpdf(s | 0, 1);
+  target += cauchy_lpdf(s | 0, 1)  - cauchy_lccdf(0 | 0, 1);
   target += inv_gamma_lpdf(s2_log10_ec50_1 | 3,2);
   target += inv_gamma_lpdf(s2_log10_ec50_2 | 3,2);
 
