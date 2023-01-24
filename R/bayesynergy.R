@@ -175,6 +175,7 @@ bayesynergy <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, u
     stan_data$t1 = t1
     stan_data$t2 = t2
     stan_data$degree = degree
+    stan_data$est_delta = T
   }
   else if (type == 2){ # GP w/  RBF kernel
     stan_data$kernel = 1
