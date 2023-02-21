@@ -1,3 +1,8 @@
+base
+methods
+datasets
+utils
+grDevices
+graphics
+stats
 bayesynergy
-ggplot2
-plotly

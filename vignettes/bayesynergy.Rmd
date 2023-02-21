@@ -56,38 +56,6 @@ combination screening experiment on diffuse large B-cell lymphoma. We'll use the
 
 Let's load in the first example and have a look at it
 
-```{r load_example,cache=T}
-library(bayesynergy)
-data("mathews_DLBCL")
-y = mathews_DLBCL[[1]][[1]]
-x = mathews_DLBCL[[1]][[2]]
-head(cbind(y,x))
-```
-
-We see that the the measured viability scores are stored in the vector
-`y`, while `x` is a matrix with two columns giving the corresponding
-concentrations where the viability scores were read off.
-
-Fitting the regression model is simple enough, and can be done on
-default settings simply by running the following code (where we add the
-names of the drugs involved, the concentration units for plotting
-purposes, and calculate the bayes factor).
-
-```{r regular_fit, cache = T, warning = FALSE}
-fit = bayesynergy(y,x, drug_names = c("ibrutinib", "ispinesib"),
-                  units = c("nM","nM"),bayes_factor = T)
-```
-
-The resulting model can be summarised by running
-
-```{r summary_fit,cache=T}
-summary(fit)
-```
-
-which gives posterior summaries of the parameters of the model. 
-
-
-For the complete example, please see here. (insert link)
 
 
 

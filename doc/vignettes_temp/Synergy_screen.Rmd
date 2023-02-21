@@ -1,0 +1,85 @@
+---
+title: "Synergy screen example"
+author: "Leiv Rønneberg"
+date: "05/09/2022"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+bibliography: references.bib
+vignette: >
+  \usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{Synergy screen example}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+The `synergyscreen` provides a work flow for data from big drug
+combination screens, where multiple drugs are tested in combination on
+multiple cell lines. It takes as input a list of experiments, each entry
+being a list containing the necessary elements needed for a call to the
+main regression function `bayesynergy`.
+
+# Melanoma cell line example
+
+Included in the package is the result of a `synergyscreen` run of 583
+drug combinations on the A-375 human melanoma cell line from
+@ONeil_2016. The `synergyscreen` object is a list with two entries, a
+dataframe with parameter estimates from each experiment, and a list
+entitled `failed` -- containing experiments that either failed
+completely to process, or had an unsatisfactory fit.
+
+```{r synergyscreen_load, cache = T}
+library(bayesynergy)
+data("ONeil_A375")
+length(ONeil_A375$failed)
+```
+
+We see that the dataset has two experiments that failed to process,
+during an initial run of `synergyscreen`. There's a multitude of reasons
+why an experiment might fail to process, it could be an input error,
+initialization problems or problems with the parallel processing.
+
+The entries of `failed` are themselves lists, each containing the
+necessary information to process through the `bayesynergy` function
+
+```{r synergyscreen_load2, cache = T}
+failed_experiment = ONeil_A375$failed[[1]]
+names(failed_experiment)
+```
+
+```{r, echo = F,cache=T}
+colnames(failed_experiment$x) = failed_experiment$drug_names
+colnames(failed_experiment$y) = "viability"
+```
+
+```{r,cache=T}
+head(cbind(failed_experiment$y,failed_experiment$x))
+```
+
+We can rerun experiments that failed to process, by simply passing the
+returned `synergyscreen` object back into the function. Note that we
+turn of the default options of saving each fit and plotting everything,
+and set `method = "vb"` indicating we use variational inference to fit
+the model.
+
+```{r synergyscreen_fit, cache = T, warning = F}
+fit_screen = synergyscreen(ONeil_A375, save_raw = F, save_plots = F, parallel = F, 
+                           bayesynergy_params = list(method = "vb"))
+```
+
+# Visualization
+
+We can also plot the result of the screen:
+
+```{r synergyscreen, cache = T, warning = FALSE, message = FALSE, fig.dim = c(8,8), fig.show="hold", results="hide", fig.keep ="all"}
+plot(fit_screen)
+```
+
+# References
