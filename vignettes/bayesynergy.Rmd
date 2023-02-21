@@ -49,14 +49,6 @@ comparing these.
 
 
 
-# A simple example -- a single experiment
-
-In the R package, we've attached two example datasets from a large drug
-combination screening experiment on diffuse large B-cell lymphoma. We'll use these to show some simple use cases of the main functions and how to interpret the results.
-
-Let's load in the first example and have a look at it
-
-
 
 
 # References
