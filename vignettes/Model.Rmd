@@ -1,0 +1,321 @@
+---
+title: "Model"
+author: "Leiv Rønneberg"
+date: "05/09/2022"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+bibliography: references.bib
+vignette: >
+  \usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{Model}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# The model
+
+The **dose-response** function $f:\boldsymbol{x} \to (0,1)$, maps drug
+concentrations $\boldsymbol{x}$ to a measure of cell viability -- zero
+corresponding to all cells being dead after treatment, one corresponding
+to all cells still alive. In drug-combination screens, it is common to
+assume that the dose-response function can be broken down as $$
+f(\boldsymbol{x}) = p_0(\boldsymbol{x})+\Delta(\boldsymbol{x}),
+$$ where $p_0(\boldsymbol{x})$ encodes a *non-interaction assumption*,
+and $\Delta(\boldsymbol{x})$ captures the residual interaction effect.
+
+## Non-interaction
+
+The non-interaction assumption, $p_0(\boldsymbol{x})$, captures what can
+be reasonably assumed about a joint drug effect, given estimates of the
+drugs' individual effect. We assume a Bliss style independence
+assumption, where we first assume that the individual drugs'
+dose-response function takes the form of a log-logistic curve $$
+h_i(x_i|l,s,m) = l + \frac{1-l}{1+10^{s(x_i-m)}},
+$$ where $l$ is the lower-asymptote, $s$ the slope, and $m$ the drugs
+'EC-50' on the $\log_{10}$ scale. The Bliss assumption then amounts to a
+probabilistic independence assumption, where $$
+p_0(\boldsymbol{x}) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2).
+$$ We call it probabilistic, because we can interpret the individual
+dose-response curves, $h_i()$ as probability of cell survival. Defining
+the events $$
+\begin{align}
+A_i & = \text{A cell survives drug A at concentration $x_{1i}$} \\
+B_j & = \text{A cell survives drug B at concentration $x_{2j}$} \\
+C_{ij} & = \text{A cell survives both drugs at concentration $\boldsymbol{x}=(x_{1i},x_{2j})$},
+\end{align}
+$$ the corresponding probabilities become $$
+p_0(\boldsymbol{x}) = P(C_{ij}) = P(A_i)P(B_i) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2).
+$$
+
+
+
+
+## Interaction
+
+The interaction component, $\Delta(\boldsymbol{x})$, captures any joint
+effect of the drugs that is not captured by the non-interaction
+assumption. If two drugs are more effective together than it would be
+expected by $p_0$, we call it *synergy*, which corresponds to
+$\Delta <0$. The opposite effect is deemed *antagonism*.
+
+Because the interaction landscape can be complex, with multiple local
+peaks and valleys, we model this term non-parametrically using a
+Gaussian Process prior (GP). To ensure that the resulting dose-response
+function only takes values in the interval $(0,1)$, we push the GP
+through a transformation function $g()$. That is $$
+z(\boldsymbol{x}) \sim \mathcal{GP}(0,\kappa(\boldsymbol{x},\boldsymbol{x}')) \\
+\Delta(\boldsymbol{x}) = g(z(\boldsymbol{x})),
+$$ where the transformation function looks like $$
+g(z(\boldsymbol{x})) = \frac{-p_0(\boldsymbol{x})}{1+\exp\left\{b_1z(\boldsymbol{x})+\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} + \frac{1-p_0(\boldsymbol{x})}{1+\exp\left\{-b_2z(\boldsymbol{x})-\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}}.
+$$ In addition to ensuring the proper bounds for the dose-response
+function, this transformation has the feature of $g(0)=0$, which
+corresponds to an *a priori* assumption that $$
+\mathbb{E}\left[f(\boldsymbol{x}) | p_0(\boldsymbol{x})\right] \approx p_0(\boldsymbol{x}).
+$$ That is, we make our non-interaction assumption into a formal prior
+expectation on the dose-response function. This achieves two things, (1)
+a slightly conservative model that needs to be convinced that
+interaction effects are present, and (2) no built-in bias of interaction
+in the prior structure.
+
+The covariance function $\kappa(\boldsymbol{x},\boldsymbol{x}')$ can be
+given multiple specifications, including a squared exponential, Matérn,
+and Rational Quadratic covariance functions. By default, we use a Matérn
+covariance with the $\nu$ parameter set to 3/2 yielding $$
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2\left(1+\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right)\exp\left\{-\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right\}.
+$$ Finally, by utilizing the natural grid structure of the drug
+concentrations, we can write the kernel function as $$
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2 \kappa(x_1,x_1')\kappa(x_2,x_2'),
+$$ which induces a Kronecker product structure on the final covariance
+matrix. Following the implementation detailed in @Flaxman_2015, this
+greatly improves the computational efficiency of the model.
+
+
+
+
+## The observation model
+
+Given the above formulation for the dose-response function $f$, we
+assume that we have access to noisy observations from it. These
+observations are typically generated from various cellular assays, e.g.
+viability assays. In particular we assume that given concentration
+points $\boldsymbol{x}_1,\ldots,\boldsymbol{x}_n$ we have observations
+$y_1,\ldots,y_n$ where $$
+y_i = f(\boldsymbol{x}_i) + \epsilon_i,
+$$ where we assume that the errors $\epsilon_i$ are normally distributed
+with mean zero. For the variance of the observational errors, by default
+we model these in a heteroscedastic fashion as $$
+\text{Var}\left[\epsilon_i\right] = \sigma^2(f(\boldsymbol{x}_i)+\lambda),
+$$ where $\lambda$ is set to a small value to handle the case when
+$f = 0$, but there is still some residual noise. In a typical setup
+where cell viability is calculated through a normalization to positive
+and negative controls, lambda can be empirically set as $$
+\lambda = \frac{\sigma^2_{+}}{\sigma^2_{-}},
+$$ where $\sigma^2_{+}$ and $\sigma^2_{-}$ denotes the variance of
+positive and negative controls, respectively.
+
+We choose a heteroscedastic model by default, because in cell viability
+assays, the observations are normalized in relation to positive and
+negative controls. The positive controls typically have much lower
+variance compared to the negative controls, which translates to
+viability measures closer to zero being more precisely measured. We also
+allow homoscedastic noise as an option.
+
+
+
+### Including controls
+
+The positive and negative controls essentially control the
+signal-to-noise ratio in cell viability assays. If the user has access
+to these, they can be included in the model to help calibrate the
+posterior distribution -- particularly in the case with zero replicates.
+
+Let $\xi^-_k$ and $\xi^+_l$ denote the negative and positive controls
+for $k=1,\ldots,n_-$ and $l=1,\ldots,n_+$. These measurements are raw
+readings from the plate and are used to calculate cell viability. For an
+additional well, treated with drug concentration $\mathbf{x}_i$, we
+denote the raw output by $\xi_i$, and calculate cell viability for this
+well by the formula: $$
+y_i = \frac{\xi_i-\tilde{\xi^+}}{\tilde{\xi^-}-\tilde{\xi^+}},
+$$ where $\tilde{\xi^-}$ and $\tilde{\xi^+}$ denotes some measure of
+centrality of the positive and negative controls, typically the mean or
+median.
+
+The controls can themselves be passed through this function and
+converted to % viability. From the variances of these normalized
+controls, $\lambda$ can be set as indicated above. And the negative
+controls can be added directly into the algorithm. Negative controls
+represents unhindered cell growth, and can be thought of as samples from
+the dose-response function $f(\mathbf{x})$ at concentration
+$\mathbf{x}=(0,0)$. These can then be added directly to the
+$\texttt{bayesynergy}$ function in the same way as regular observations.
+
+## Full model specification
+
+The full model specification, with all default prior distributions look
+like $$
+y_i \sim \mathcal{N}\left(f(\boldsymbol{x}_i),\sigma^2(f(\boldsymbol{x}_i)+\lambda)\right), \ i = 1,\ldots, n \\
+\sigma \sim \text{Inv-Ga}\left(5,1\right), \ \lambda = 0.005. \\
+f(\boldsymbol{x}_i) = p_0(\boldsymbol{x}_i)+\Delta(\boldsymbol{x}_i) \mathbb{I}(10^{\boldsymbol{x}_i}>0) \\
+p_0(\boldsymbol{x}) = h_1(x_1|l_1,s_1,m_1) \ h_2(x_2|l_2,s_2,m_2). \\
+l_j = \text{Beta}(1,1.25), \ s_i \sim \text{Gamma}(1,1), \\ 
+m_i \sim \mathcal{N}(\theta_i,\sigma_{m_i}^2), \ j = 1,2 \\
+\theta_i \sim \mathcal{N}(0,1), \ \sigma_{m_i}^2 \sim \text{Inv-Ga}\left(3,2\right), \ j = 1,2 \\
+\Delta(\boldsymbol{x}) = g(z(\boldsymbol{x})), \ z(\boldsymbol{x}) \sim \mathcal{GP}(0,\kappa(\boldsymbol{x},\boldsymbol{x}')) \\
+g(z(\boldsymbol{x})) = \frac{-p_0(\boldsymbol{x})}{1+\exp\left\{b_1z(\boldsymbol{x})+\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} + \frac{1-p_0(\boldsymbol{x})}{1+\exp\left\{-b_2z(\boldsymbol{x})-\log\left[\frac{p_0(\boldsymbol{x})}{1-p_0(\boldsymbol{x})}\right]\right\}} \\
+\kappa(\boldsymbol{x},\boldsymbol{x}') = \sigma_f^2\left(1+\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right)\exp\left\{-\frac{\sqrt{3}\Vert\boldsymbol{x}-\boldsymbol{x}'\Vert}{\ell}\right\}, \\
+\sigma_f^2 \sim \text{log-}\mathcal{N}(1,1), \ \ell \sim \text{Inv-Ga}(5,5) \\
+b_j \sim \mathcal{N}(1,0.1^2), \ j = 1,2.
+$$ Note that some of these specifications can be altered. For example,
+by default we estimate the lower asymptotes, but they can also be fixed
+equal to zero.
+
+In the model specification above, the interaction term is multiplied
+with an indicator function $\mathbb{I}(\boldsymbol{x}>0)$ taking the
+value 1 if and only if all elements in $\boldsymbol{x}$ is strictly
+larger than zero. This makes sure that we don't allow for interaction
+when one of the drugs is at zero concentration.
+
+## Summary measures
+
+From the posterior dose-response function $f | \mathbf{y}$, we derive a
+number of summary statistics concerning efficacy, synergy and
+antagonism.
+
+
+
+
+
+### Monotherapy summaries
+
+For the monotherapy curves, we produce estimates of the drug sensitivity
+score (DSS) of each drug by the integral
+
+$$
+DSS_0 = \int_a^b 1-h_j(x) \text{d}x,
+$$ where $a=\min(x_{1j})$ and $b=\max(x_{1j})$. That is, the integral is
+taken from the measured dose range of the drug in question. This is in
+contrast to how the regular DSS score is calculated, where integration
+starts where the mono-therapy crosses the 90% viability threshold. This
+is done to better separate true effects from background noise, but since
+this is handled here through sampling, we don't need it. The DSS value
+is further standardized by the total volume available for drug efficacy,
+$$
+DSS = \frac{DSS_0}{(b-a)}
+$$ From here, values can be further standardized as in @Yadav_2014.
+
+### Combination summaries
+
+To summarise the combined drug-response function, we utilise the
+measures developed in @Cremaschi_2019. The basic building block is the
+'volume under the surface' or **VUS**, for which the general integral
+looks like
+
+$$
+VUS_0(f) = \int_a^b \int_c^d f(\mathbf{x}) \ \text{d}\mathbf{x},
+$$ and the integrals are taken over the observed drug range, i.e.
+$a = \min (x_1)$, $b = \max (x_1)$, $c = \min (x_2)$, $d = \max (x_2)$.
+This is then standardised to obtain a value between zero and 100, $$
+VUS(f) = \frac{VUS_0(f)}{(b-a)(d-c)}.
+$$ Furthermore, to make this into an overall measure of efficacy, we
+define the *residual* VUS (**rVUS**) by
+
+$$
+rVUS(f) = 100 - VUS(f),
+$$ which makes this value more comparable with the DSS values, where a
+higher number now indicates a larger efficacy of the drug combination.
+
+The model calculates $rVUS$ for the dose-response function $f$, giving a
+measure of combined efficacy. In addition, we calculate $rVUS(p_0)$, the
+non-interaction efficacy. This makes it possible to separate how much of
+the total efficacy that can be attributed to the non-interaction
+assumption. For the interaction term, we simply compute the **VUS**
+values e.g. $VUS(\Delta)$ for the interaction efficacy. For the
+interaction term $\Delta$, we also compute $VUS(\Delta^{-})$ and
+$VUS(\Delta^{+})$ for synergy and antagonism, where $\Delta^{+}$ and
+$\Delta^{-}$ denotes the positive and negative parts of $\Delta$,
+respectively. That is,
+
+$$
+\Delta^{+}(\mathbf{x}) = \max(0,\Delta(\mathbf{x})) \\
+\Delta^{-}(\mathbf{x}) = \min(0,\Delta(\mathbf{x})).
+$$ We compute these measures because, frequently, the interaction
+surface contains both antagonistic and synergistic regions. When taking
+the average across the whole surface, an antagonistic outlier might
+cancel an otherwise strong synergistic effect.
+
+### Summarising large screens
+
+When running screens with a large amount of drug combinations, it is
+helpful to have a normalised measure for comparing synergy across
+experiments. The $rVUS$ scores defined above are already standardized to
+their drug concentration range, but to compare across experiments, we
+also standardize with respect to the uncertainty in the model. To do
+this, we calculate a **synergy score** by normalizing $rVUS(\Delta^{-})$
+with respect to its standard deviation. $$
+\text{Synergy score} = \frac{\text{mean}(VUS(\Delta^{-}))}{\text{sd}(VUS(\Delta^{-}))}.
+$$
+
+## Synergy classification
+
+Frequently, it is of interest to classify an experiment as *synergistic*
+or *antagonistic*. Usually, this has been done by thresholding the
+synergy measure at a certain level, declaring e.g. everything above 10
+as synergistic, everything below -10 antagonistic, and anything in
+between as additive (no interaction). The problem with this is that it
+completely ignores the underlying measurement error, and as a
+consequence the thresholding procedure can lead to misclassification.
+Large synergistic effects might be classified as synergistic, but in
+reality the effect cannot be discerned from the background noise. In the
+same manner, genuine synergistic effects that are too small, for example
+because the dose-ranges are a bit off, will also be misclassified. By
+incorporating the uncertainty into the classification it can be done in
+a more principled manner.
+
+In Bayesian inference, we can compute what is know as the model
+*evidence*. That is, given a probabilistic model $\mathcal{M}$, and some
+data we think is generated from it, $\mathcal{D}$, the evidence is
+defined as the probability of the model given the data,
+$P(\mathcal{M} \vert \mathcal{D})$. We can use this quantity to compare
+different models, in particular when comparing two distinct models we
+can define the **Bayes Factor,** $\text{BF}_{10}$: $$
+\text{BF}_{10}=\frac{P(\mathcal{D}\vert\mathcal{M}_1)}{P(\mathcal{D}\vert\mathcal{M}_0)} = \frac{P(\mathcal{M}_1 \vert \mathcal{D})}{P(\mathcal{M}_0 \vert \mathcal{D})}\frac{P(\mathcal{M}_1)}{P(\mathcal{M}_0)},
+$$ where $P(\mathcal{M}_1)$ and $P(\mathcal{M}_0)$ denotes the prior
+model probabilities. By defining $$
+\mathcal{M}_0: f(\mathbf{x}) = p_0(\mathbf{x}) \\
+\mathcal{M}_1: f(\mathbf{x}) = p_0(\mathbf{x}) + \Delta(\mathbf{x}),
+$$ and computing $\text{BF}_{10}$, the Bayes factor gives information on
+whether the interaction surface needs to be included in the model. A
+high value indicates that $\mathcal{M}_1$ is preferred over
+$\mathcal{M}_0$, and thus that there most likely is some interaction in
+the experiment. One still needs to make a cutoff, but it will be less
+arbitrary by connecting it directly to the uncertainty in the model, and
+model evidence. The thresholding itself can be done according to e.g.
+the table in @Kass1995:
+
+```{r,echo=F,cache=T}
+df = data.frame("BF10" = c("1 to 3.2","3.2 to 10","10 to 100",">100"),"Evidence against M0" = c("Not worth more than a bare mention","Substantial","Strong","Decisive"))
+knitr::kable(df,col.names = c("$\\text{BF}_{10}$","Evidence against $\\mathcal{M}_0$"),align="cc",format = "simple")
+```
+
+
+The Bayes factor only gives information about whether or not an
+interaction is present. Depending on the classification task, one still
+needs to decide if the effect is synergistic or antagonistic. For this
+one could e.g. use the integral of the interaction surface,
+$\text{VUS}(\Delta)$, if this is negative the experiment is coded as
+synergistic, if positive it is coded as antagonistic.
+
+The calculation of the Bayes factor is implemented directly in the
+`bayesynergy` function, and can be calculated simply by adding
+`bayes_factor = T` to the call. Model evidence and the Bayes factor
+itself is computed via the `bridgesampling` package (@Gronau2020).
+
+
+# References

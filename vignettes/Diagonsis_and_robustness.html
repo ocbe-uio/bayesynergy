@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Leiv Rønneberg" />
+
+<meta name="date" content="2022-05-09" />
+
+<title>Diagnosis, warnings and robustness</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Diagnosis, warnings and robustness</h1>
+<h4 class="author">Leiv Rønneberg</h4>
+<h4 class="date">05/09/2022</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#diagnosing-errors-and-warnings" id="toc-diagnosing-errors-and-warnings">Diagnosing errors and
+warnings</a>
+<ul>
+<li><a href="#divergent-transitions" id="toc-divergent-transitions">Divergent Transitions</a></li>
+</ul></li>
+<li><a href="#robustness-against-outliers" id="toc-robustness-against-outliers">Robustness against
+outliers</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div id="diagnosing-errors-and-warnings" class="section level1">
+<h1>Diagnosing errors and warnings</h1>
+<p>Sometimes, the <code>bayesynergy</code> function may return with a
+warning. Ideally, we don’t want any warnings at all, and they should be
+examined closely, as posterior samples could be unreliable. Usually, the
+warning will tell the user how to fix the problem at hand, e.g. by
+running the chains for longer (set <code>iter</code> higher), or setting
+<code>adapt_delta</code> higher. See [<a href="https://mc-stan.org/misc/warnings.html" class="uri">https://mc-stan.org/misc/warnings.html</a>] for some general
+tips.</p>
+<div id="divergent-transitions" class="section level2">
+<h2>Divergent Transitions</h2>
+<p>Most commonly, the sampler might complain about divergent
+transitions. The warning will typically look like this:</p>
+<pre><code>## Warning: There were 2316 divergent transitions after warmup. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.</code></pre>
+<p>This is indicative of a posterior geometry that is tricky to explore.
+In the case where there is only a few divergent transitions, the usual
+trick is to set <code>adapt_delta</code> to a higher value, i.e. larger
+than 0.9 which is the default. This can be done through the
+<code>control</code> option in the <code>bayesynergy</code> call:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">=</span> <span class="fu">bayesynergy</span>(y, x, <span class="at">control =</span> <span class="fu">list</span>(<span class="at">adapt_delta =</span> <span class="fl">0.99</span>))</span></code></pre></div>
+<p>However, the case above, where there are 2316 divergent transitions,
+is indicative of a misspecified model. In my experience, this can happen
+for a few reasons.</p>
+<ul>
+<li>Estimating ‘flat’ monotherapies
+<ul>
+<li>i.e. when the parameter <span class="math inline">\(l\)</span> is
+close to one. This can have the effect of making the other monotherapy
+parameters unidentifiable.</li>
+<li>this can usually be alleviated by setting
+<code>lower_asymptotes = FALSE</code> in the call. Unless one is
+specifically interested in these parameters, there are no reason to
+estimate them – the model fit will typically still be good without
+them.</li>
+</ul></li>
+<li>Estimating <span class="math inline">\(l\)</span> in the
+heteroscedastic model
+<ul>
+<li>the model can struggle in this setting, particularly if there are
+none or few replicates.</li>
+<li>choose a homoscedastic model instead.</li>
+</ul></li>
+<li>‘Wrong’ <span class="math inline">\(\lambda\)</span> value
+<ul>
+<li>sometimes setting <span class="math inline">\(\lambda\)</span> much
+lower than the initial setting can help with a better fit. This is
+particularly true if viability scores close to zero (or negative) are
+truncated or set to exactly zero.</li>
+</ul></li>
+</ul>
+</div>
+</div>
+<div id="robustness-against-outliers" class="section level1">
+<h1>Robustness against outliers</h1>
+<p>We provide a version of the model that is more robust against
+inevitable outliers in dose=response data. This is done by swapping out
+two components of the model formulation, the likelihood and the prior
+for kernel hyperparameters.</p>
+<p>For the likelihood, we utilise the log-Pareto-tailed Normal (LPTN)
+distribution with mean <span class="math inline">\(\mu\)</span> and
+standard deviation <span class="math inline">\(\sigma\)</span>, as
+described in <span class="citation">Gagnon, Desgagné, and Bédard
+(2020)</span> which takes the form <span class="math display">\[
+f(x)=
+\begin{cases}
+\frac{1}{\sigma}\phi\left(\frac{x-\mu}{\sigma}\right) &amp; \text{if }
+\vert\frac{x-\mu}{\sigma}\vert \leq \tau \\
+\frac{1}{\sigma}\phi(\tau)\frac{\tau}{\vert\frac{x-\mu}{\sigma}\vert}\left(\frac{\log
+(\tau)}{\log(\vert\frac{x-\mu}{\sigma}\vert)}\right)^{\lambda+1} &amp;
+\text{if } \vert\frac{x-\mu}{\sigma}\vert &gt; \tau
+\end{cases}
+\]</span> where <span class="math inline">\(\phi\)</span> denotes the
+standard normal pdf. The parameters <span class="math inline">\((\tau,\lambda)\)</span> are controlled by the
+user-specified hyperparameter <span class="math inline">\(\rho \in
+(2\Phi(1)-1,1)\)</span> as <span class="math display">\[
+\tau=\Phi^{-1}((1+\rho)/2),  \ \ \ \
+\lambda=2(1-\rho)^{-1}\phi(\tau)\tau\log(\tau)
+\]</span></p>
+<p>The robust likelihood can be utilized by setting
+<code>robust = T</code> when calling the<code>bayesynergy</code>
+function. The user-specified parameter <span class="math inline">\(\rho\)</span> can be set by the <code>rho</code>
+argument, by default set to <span class="math inline">\(0.9\)</span>.</p>
+<p>For the kernel, we recommend utilising the Matérn kernel with a
+Penalized Complexity (PC) prior on the kernel hyperparameters. The PC
+prior for the Matern covariance was described in <span class="citation">Fuglstad et al. (2018)</span>, and strongly encourages
+small deviations from the null model, i.e. high probability of an
+interaction term being zero. The PC prior for the kernel hyperparameters
+<span class="math inline">\((\sigma_f^2,\ell)\)</span> (in the
+2-dimensional case) takes the form <span class="math display">\[
+\pi(\sigma_f^2,\ell)=\tilde{\lambda}_1\tilde{\lambda}_2\ell^{-2}\sigma_f^{-1}\exp\left(-\tilde{\lambda}_1\ell^{-1}-\tilde{\lambda}_2\sigma_f\right),
+\]</span> where <span class="math inline">\((\tilde{\lambda}_1,\tilde{\lambda}_2)\)</span> are
+set to reflect prior beliefs <span class="math inline">\(P(\ell &lt;
+\ell_0)=\alpha_1\)</span> and <span class="math inline">\(P(\sigma_f^2
+&gt; \sigma^2_{f0})=\alpha_2\)</span> by <span class="math display">\[
+\tilde{\lambda}_1=-\log(-\alpha_1)\ell \ \ \ \
+\tilde{\lambda}_2=-\frac{\log(\alpha_2)}{\sigma_{f0}^2},
+\]</span> where <span class="math inline">\((\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)\)</span>
+are hyperparameters that are set by the user. The PC prior can be
+enabled by setting <code>pcprior = T</code> when calling the
+<code>bayesynergy</code> function, and hyperparameters specified by the
+argument <code>pcprior_hypers</code>. By default, we recommend <span class="math inline">\((\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)=(1,0.1,1,0.2)\)</span>.</p>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Fuglstad2018" class="csl-entry">
+Fuglstad, Geir-Arne, Daniel Simpson, Finn Lindgren, and Håvard Rue.
+2018. <span>“Constructing Priors That Penalize the Complexity of
+Gaussian Random Fields.”</span> <em>Journal of the American Statistical
+Association</em> 114 (525): 445–52. <a href="https://doi.org/10.1080/01621459.2017.1415907">https://doi.org/10.1080/01621459.2017.1415907</a>.
+</div>
+<div id="ref-Gagnon2020" class="csl-entry">
+Gagnon, Philippe, Alain Desgagné, and Mylène Bédard. 2020. <span>“A New
+Bayesian Approach to Robustness Against Outliers in Linear
+Regression.”</span> <em>Bayesian Analysis</em> 15 (2). <a href="https://doi.org/10.1214/19-ba1157">https://doi.org/10.1214/19-ba1157</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

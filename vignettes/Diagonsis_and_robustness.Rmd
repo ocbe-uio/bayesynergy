@@ -1,0 +1,116 @@
+---
+title: "Diagnosis, warnings and robustness"
+author: "Leiv Rønneberg"
+date: "05/09/2022"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+bibliography: references.bib
+vignette: >
+  \usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{Diagnosis, warnings and robustness}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Diagnosing errors and warnings
+
+Sometimes, the `bayesynergy` function may return with a warning.
+Ideally, we don't want any warnings at all, and they should be examined
+closely, as posterior samples could be unreliable. Usually, the warning
+will tell the user how to fix the problem at hand, e.g. by running the
+chains for longer (set `iter` higher), or setting `adapt_delta` higher.
+See [<https://mc-stan.org/misc/warnings.html>] for some general tips.
+
+## Divergent Transitions
+
+Most commonly, the sampler might complain about divergent transitions.
+The warning will typically look like this:
+
+    ## Warning: There were 2316 divergent transitions after warmup. See
+    ## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+    ## to find out why this is a problem and how to eliminate them.
+
+This is indicative of a posterior geometry that is tricky to explore. In
+the case where there is only a few divergent transitions, the usual
+trick is to set `adapt_delta` to a higher value, i.e. larger than 0.9
+which is the default. This can be done through the `control` option in
+the `bayesynergy` call:
+
+```{r, eval = F}
+fit = bayesynergy(y, x, control = list(adapt_delta = 0.99))
+```
+
+However, the case above, where there are 2316 divergent transitions, is
+indicative of a misspecified model. In my experience, this can happen
+for a few reasons.
+
+-   Estimating 'flat' monotherapies
+    -   i.e. when the parameter $l$ is close to one. This can have the
+        effect of making the other monotherapy parameters
+        unidentifiable.
+    -   this can usually be alleviated by setting
+        `lower_asymptotes = FALSE` in the call. Unless one is
+        specifically interested in these parameters, there are no reason
+        to estimate them -- the model fit will typically still be good
+        without them.
+-   Estimating $l$ in the heteroscedastic model
+    -   the model can struggle in this setting, particularly if there
+        are none or few replicates.
+    -   choose a homoscedastic model instead.
+-   'Wrong' $\lambda$ value
+    -   sometimes setting $\lambda$ much lower than the initial setting
+        can help with a better fit. This is particularly true if
+        viability scores close to zero (or negative) are truncated or
+        set to exactly zero.
+        
+        
+# Robustness against outliers
+We provide a version of the model that is more robust against inevitable outliers in dose=response data. This is done by swapping out two components of the model formulation, the likelihood and the prior for kernel hyperparameters.
+
+For the likelihood, we utilise the log-Pareto-tailed Normal (LPTN) distribution with mean $\mu$ and standard deviation $\sigma$, as described in @Gagnon2020 which
+takes the form 
+$$
+f(x)=
+\begin{cases}
+\frac{1}{\sigma}\phi\left(\frac{x-\mu}{\sigma}\right) & \text{if } \vert\frac{x-\mu}{\sigma}\vert \leq \tau \\
+\frac{1}{\sigma}\phi(\tau)\frac{\tau}{\vert\frac{x-\mu}{\sigma}\vert}\left(\frac{\log (\tau)}{\log(\vert\frac{x-\mu}{\sigma}\vert)}\right)^{\lambda+1} & \text{if } \vert\frac{x-\mu}{\sigma}\vert > \tau
+\end{cases}
+$$
+where $\phi$ denotes the standard normal pdf. The parameters
+$(\tau,\lambda)$ are controlled by the user-specified hyperparameter
+$\rho \in (2\Phi(1)-1,1)$ as $$
+\tau=\Phi^{-1}((1+\rho)/2),  \ \ \ \ \lambda=2(1-\rho)^{-1}\phi(\tau)\tau\log(\tau)
+$$
+
+The robust likelihood can be utilized by setting `robust = T` when
+calling the`bayesynergy` function. The user-specified parameter $\rho$
+can be set by the `rho` argument, by default set to $0.9$.
+
+For the kernel, we recommend utilising the Matérn
+kernel with a Penalized Complexity (PC) prior on the kernel
+hyperparameters. The PC prior for the Matern covariance was described in
+@Fuglstad2018, and strongly encourages small deviations from the null
+model, i.e. high probability of an interaction term being zero. The PC
+prior for the kernel hyperparameters $(\sigma_f^2,\ell)$ (in the
+2-dimensional case) takes the form $$
+\pi(\sigma_f^2,\ell)=\tilde{\lambda}_1\tilde{\lambda}_2\ell^{-2}\sigma_f^{-1}\exp\left(-\tilde{\lambda}_1\ell^{-1}-\tilde{\lambda}_2\sigma_f\right),
+$$ where $(\tilde{\lambda}_1,\tilde{\lambda}_2)$ are set to reflect
+prior beliefs $P(\ell < \ell_0)=\alpha_1$ and
+$P(\sigma_f^2 > \sigma^2_{f0})=\alpha_2$ by $$
+\tilde{\lambda}_1=-\log(-\alpha_1)\ell \ \ \ \ \tilde{\lambda}_2=-\frac{\log(\alpha_2)}{\sigma_{f0}^2},
+$$ where $(\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)$ are hyperparameters
+that are set by the user. The PC prior can be enabled by setting
+`pcprior = T` when calling the `bayesynergy` function, and
+hyperparameters specified by the argument `pcprior_hypers`. By default,
+we recommend $(\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)=(1,0.1,1,0.2)$.
+
+
+# References

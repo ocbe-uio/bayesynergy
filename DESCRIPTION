@@ -3,7 +3,13 @@ Type: Package
 Title: Bayesian semi-parametric modelling for in-vitro drug combination experiments
 Version: 2.5.1
 Date: 2023-01-24
-Author: Leiv Rønneberg, Andrea Cremaschi, Robert Hanes, Manuela Zucknick
+Authors@R: c(
+  person("Leiv", "Rønneberg", email = "leiv.ronneberg@mrc-bsu.cam.ac.uk", role = c("aut", "cre")),
+  person("Andrea", "Cremaschi", role = c("aut")),
+  person("Robert", "Hanes", role = c("aut")),
+  person("Chi", "Zhang", email = "chi.zhang@medisin.uio.no", role = c("aut")),
+  person("Manuela", "Zucknick", email = "manuela.zucknick@medisin.uio.no", role = c("aut"))
+  )
 Maintainer: Leiv Rønneberg <leiv.ronneberg@mrc-bsu.cam.ac.uk>
 Description: The package implements a Gaussian process (GP) - based regression model to estimate the response surface of the viability responses obtained when two drugs are combined. The input data consists of the measured viability responses and the doses used in the combination experiment. Furthermore, the user can choose between different kernels for the definition of the covariance structure.
 License: GPL (>= 2)
@@ -39,6 +45,6 @@ LinkingTo:
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
 Biarch: true
 SystemRequirements: GNU make

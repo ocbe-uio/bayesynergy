@@ -6,3 +6,6 @@ Icon
 ^Meta$
 .github
 ^bayesynergy\.Rproj$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
