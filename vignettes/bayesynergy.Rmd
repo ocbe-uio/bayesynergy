@@ -1,7 +1,7 @@
 ---
 title: "bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments"
 author: "Leiv Rønneberg"
-date: "05/09/2022"
+date: "22/02/2023"
 output: 
   rmarkdown::html_vignette:
     toc: true
