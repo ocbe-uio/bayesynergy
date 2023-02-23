@@ -44,6 +44,10 @@ bayesynergy3 <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, 
   unqX1 = log10(sort(unique(x[,1])))[-1] # Removing -Inf here
   unqX2 = log10(sort(unique(x[,2])))[-1] # Removing -Inf here
   unqX3 = log10(sort(unique(x[,3])))[-1] # Removing -Inf here
+  
+  n1 = length(unqX1)
+  n2 = length(unqX2)
+  n3 = length(unqX3)
 
   # Need to find coordinates for the observed variables in this new coordinate system
   X1 = c(0,10^unqX1)
@@ -64,10 +68,10 @@ bayesynergy3 <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, 
   } else {
     nrep = max(table(ii_obs))
     ii_obs = ii_obs[which(!is.na(y))] # Removing those that are missing
-    nmissing = (length(unqX1)+length(unqX2)+  length(unqX3) +
-                  length(unqX1)*length(unqX2) + length(unqX1)*length(unqX3) +
-                  length(unqX2)*length(unqX3) +
-                  length(unqX1)*length(unqX2)*length(unqX3)+1)*nrep-length(ii_obs)
+    nmissing = (n1+n2+  n3 +
+                  n1*n2 + n1*n3 +
+                  n2*n3 +
+                  n1*n2*n3+1)*nrep-length(ii_obs)
   }
 
   y = as.vector(y)
@@ -75,7 +79,7 @@ bayesynergy3 <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, 
 
 
   # Setting up data for Stan
-  stan_data = list(n1=length(unqX1), n2=length(unqX2), n3=length(unqX3),
+  stan_data = list(n1=n1, n2=n2, n3=n3,
                    x1=unqX1, x2=unqX2, x3=unqX3, nrep=nrep,
                    y=y, nmissing=nmissing, ii_obs = ii_obs, est_la = lower_asymptotes,
                    lambda = lambda)
@@ -110,84 +114,83 @@ bayesynergy3 <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, 
 
 
   # # Some calculations:
-  # posterior = rstan::extract(fit)
-  # n.save = length(posterior$lp__)
+  posterior = rstan::extract(fit)
+  n.save = length(posterior$lp__)
   # LPML = -sum(log(apply(posterior$CPO,2,sum)/n.save))
-  # coef_names = names(posterior)
+  coef_names = names(posterior)
   # # Remove those we don't care about
-  # coef_names = setdiff(coef_names,c("z","p0","p01","p02","Delta","wout","CPO","lp__"))
-  #
-  # # Surfaces
-  # # Mean response
-  # f = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
-  # f[,1,1] = 1
-  # f[,2:(length(unqX2)+1),1] = posterior$p02
-  # f[,1,2:(length(unqX1)+1)] = posterior$p01
-  # f[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0+posterior$Delta
-  # f_mean = c()
-  # if (robust){
-  #   f_mean = apply(f,c(2,3),median)
-  # } else{
-  #   f_mean = apply(f,c(2,3),mean)
-  # }
+  coef_names = setdiff(coef_names,c("z_12","z_13","z_23","z_123","p01","p02","p03","p0_12","p0_13","p0_23","p0_123",
+                                    "Delta_12","Delta_13","Delta_23","Delta_123","wout","CPO","lp__"))
+
+  # Surfaces
+  # Mean response
+  # First we create the arrays we need and find posterior means
+  f = array(NA,dim=c(n.save,(n3+1),(n2+1),(n1+1)))
+  p0 = array(NA,dim=c(n.save,(n3+1),(n2+1),(n1+1)))
+  Delta = array(NA,dim=c(n.save,(n3+1),(n2+1),(n1+1)))
+  # Fill in data
+  # First what happens at (0,1)
+  p0[,1,1,1] = 1 # At (0,1) everything is 1
+  Delta[,1,1,1] = 0
+  # Then monotherapies
+  p0[,1,1,2:(n1+1)] = posterior$p01
+  p0[,1,2:(n2+1),1] = posterior$p02
+  p0[,2:(n3+1),1,1] = posterior$p03
+  Delta[,1,1,2:(n1+1)] = 0
+  Delta[,1,2:(n2+1),1] = 0
+  Delta[,2:(n3+1),1,1] = 0
+  
+  # Then the two-drug effects
+  p0[,1,2:(n2+1),2:(n1+1)] = posterior$p0_12
+  p0[,2:(n3+1),1,2:(n1+1)] = posterior$p0_13
+  p0[,2:(n3+1),2:(n2+1),1] = posterior$p0_23
+  Delta[,1,2:(n2+1),2:(n1+1)] = posterior$Delta_12
+  Delta[,2:(n3+1),1,2:(n1+1)] = posterior$Delta_13
+  Delta[,2:(n3+1),2:(n2+1),1] = posterior$Delta_23
+  # Finally the three drug effects
+  p0[,2:(n3+1),2:(n2+1),2:(n1+1)] = posterior$p0_123
+  Delta[,2:(n3+1),2:(n2+1),2:(n1+1)] = posterior$Delta_123
+  # Construct the dose-response by summing
+  f = p0 + Delta
+  
+  # Average over samples
+  f_mean = apply(f,c(2,3,4),mean)
+  p0_mean = apply(p0,c(2,3,4),mean)
+  Delta_mean = apply(Delta,c(2,3,4),mean)
+  
+  
+  
   # colnames(f_mean) = signif(c(0,10^unqX1),4)
   # rownames(f_mean) = signif(c(0,10^unqX2),4)
-  # # Mean non-interaction
-  # p0 = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
-  # p0[,1,1] = 1
-  # p0[,2:(length(unqX2)+1),1] = posterior$p02
-  # p0[,1,2:(length(unqX1)+1)] = posterior$p01
-  # p0[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$p0
-  # #p0_mean = apply(p0,c(2,3),mean)
-  # p0_mean = apply(p0,c(2,3),median)
-  # colnames(p0_mean) = signif(c(0,10^unqX1),4)
-  # rownames(p0_mean) = signif(c(0,10^unqX2),4)
-  # # Mean interaction
-  # Delta = array(data=NA,c(n.save,length(unqX2)+1,length(unqX1)+1))
-  # Delta[,1,1] = 0
-  # Delta[,2:(length(unqX2)+1),1] = 0
-  # Delta[,1,2:(length(unqX1)+1)] = 0
-  # Delta[,2:(length(unqX2)+1),2:(length(unqX1)+1)] = posterior$Delta
-  # #Delta_mean = apply(Delta,c(2,3),mean)
-  # Delta_mean = apply(Delta,c(2,3),median)
-  # colnames(Delta_mean) = signif(c(0,10^unqX1),4)
-  # rownames(Delta_mean) = signif(c(0,10^unqX2),4)
+  
+
+  # Pull out posterior mean and add some stuff
+  posterior_mean = as.list(rstan::summary(fit,pars=coef_names)$summary[,'mean'])
+  posterior_mean$f = f_mean
+  posterior_mean$p0 = p0_mean
+  posterior_mean$Delta = Delta_mean
   #
-  # # Pull out posterior mean and add some stuff
-  # posterior_mean = as.list(rstan::summary(fit,pars=coef_names)$summary[,'mean'])
-  # posterior_mean$f = f_mean
-  # posterior_mean$p0 = p0_mean
-  # posterior_mean$Delta = Delta_mean
-  #
-  # data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID, units = units, indices = ii_obs)
-  # model = list(type = type, lower_asymptotes = lower_asymptotes, method = method,
-  #              bayes_factor = bayes_factor, heteroscedastic = heteroscedastic,
-  #              robust = robust, pcprior = pcprior, lambda = lambda)
-  #
-  # # If matern kernel, add value of nu
-  # if (type==3){
-  #   model$nu = nu
-  #   model$pcprior_hypers = pcprior_hypers
-  # }
-  #
-  # # Inspect residuals
+  data = list(y = y.original, x = x.original, drug_names = drug_names, experiment_ID = experiment_ID, units = units, indices = ii_obs)
+  model = list(lower_asymptotes = lower_asymptotes, lambda = lambda)
+  
+  # Inspect residuals
   # residuals = y - as.vector(f_mean)[ii_obs]
   # # Pull out pointwise observation noise
   # point_sd = sqrt(posterior_mean$s^2*(f_mean[ii_obs]+lambda))
   # # If any residuals are outside 3*sd, user is alerted
   # if (sum(abs(residuals) > 3*point_sd) > 0){
-  #   res_msg = paste("Largest residuals from posterior median is",signif(max(residuals),4),", which is more than three times the observation noise. This could indicate the presence of an outlier.")
-  #   warning(res_msg,call. = F)
-  #   returnCode = 1
-  #   messages = c(messages,res_msg)
+    # res_msg = paste("Largest residuals from posterior median is",signif(max(residuals),4),", which is more than three times the observation noise. This could indicate the presence of an outlier.")
+    # warning(res_msg,call. = F)
+    # returnCode = 1
+    # messages = c(messages,res_msg)
   # }
   #
   #
   #
   #
-  # object = list(stanfit = fit, posterior_mean = posterior_mean,
-  #               data = data, model = model, returnCode = returnCode,
-  #               LPML = LPML)
+  object = list(stanfit = fit, posterior_mean = posterior_mean,
+                data = data, model = model, returnCode = returnCode)#,
+                # LPML = LPML)
   # # Set some diagnostics
   # object$divergent = NA
   # if (returnCode){
@@ -207,6 +210,6 @@ bayesynergy3 <- function(y, x, type = 3, drug_names=NULL, experiment_ID = NULL, 
   # }
   #
   #
-  # class(object) <- "bayesynergy"
-  return(fit)
+  class(object) <- "bayesynergy3"
+  return(object)
 }
