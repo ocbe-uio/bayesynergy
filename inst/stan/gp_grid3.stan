@@ -1,4 +1,5 @@
 functions{
+<<<<<<< HEAD
   #include "/include/kron_mvprod.stan"
   #include "/include/VUS.stan"
   #include "/include/VUS3.stan"
@@ -9,6 +10,18 @@ functions{
   #include "/include/matrix_array_max.stan"
   #include "/include/one_minus_matrix_array.stan"
   #include "/include/sum_matrix_array.stan"
+=======
+#include "/include/kron_mvprod.stan"
+#include "/include/VUS.stan"
+#include "/include/VUS3.stan"
+#include "/include/dss.stan"
+#include "/include/matrix_min.stan"
+#include "/include/matrix_max.stan"
+#include "/include/matrix_array_min.stan"
+#include "/include/matrix_array_max.stan"
+#include "/include/one_minus_matrix_array.stan"
+#include "/include/sum_matrix_array.stan"
+>>>>>>> 47c44f2 (finished basic functionality for three-drug combinations)
 }
 data {
   int<lower=1> n1;                                        // No. of concentrations for drug 1
