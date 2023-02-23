@@ -1,13 +1,4 @@
 functions{
-<<<<<<< HEAD
-  #include "/include/kron_mvprod.stan"
-  #include "/include/VUS.stan"
-  #include "/include/dss.stan"
-  #include "/include/matrix_min.stan"
-  #include "/include/matrix_max.stan"
-  #include "/include/pc_prior.stan"
-  #include "/include/lptn.stan"
-=======
 #include "/include/kron_mvprod.stan"
 #include "/include/VUS.stan"
 #include "/include/dss.stan"
@@ -15,7 +6,6 @@ functions{
 #include "/include/matrix_max.stan"
 #include "/include/pc_prior.stan"
 #include "/include/lptn.stan"
->>>>>>> d1b11c8 (removed gp.stan, and updates stanmodels.R)
 }
 data {
   int<lower=1> n1;                                        // No. of concentrations for drug 1
