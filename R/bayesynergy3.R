@@ -6,18 +6,25 @@
 #' @param y vector or matrix of viability measures. Replicates can be given in long or wide format.
 #' @param x three-column matrix of drug concentrations.
 <<<<<<< HEAD
+<<<<<<< HEAD
 #' @param type integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).
 =======
 >>>>>>> 7a52fb0 (updated documentation)
+=======
+>>>>>>> 82d2995 (updated documentation)
 #' @param drug_names vector of size 2; names of the drugs utilized for the experiment.
 #' @param experiment_ID character; identifier of experiment, typically name of cell Line.
 #' @param units vector of size 2; concentration units for the drugs, e.g. c("\eqn{\mu}M","\eqn{\mu}M")
 #' @param lower_asymptotes logical; if TRUE the model will estimate the lower asymptotes of monotherapy curves.
 #' @param lambda numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 #' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
 >>>>>>> 7a52fb0 (updated documentation)
+=======
+#' @param method The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.
+>>>>>>> 82d2995 (updated documentation)
 #' @param control list; passed on to the stan sampler, e.g. for setting adapt_delta.
 #' @param ... Arguments passed to \code{\link[rstan:sampling]{rstan::sampling}} or \code{\link[rstan:vb]{rstan::vb}} (e.g. iter, chains).
 #'
