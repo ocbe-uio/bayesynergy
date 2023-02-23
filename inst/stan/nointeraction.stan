@@ -1,8 +1,8 @@
 // A version of gp_grid.stan that only estimates f = p0. Used for computing the Bayes factor
 functions{
-  #include /include/VUS.stan
-  #include /include/lptn.stan
-  #include /include/dss.stan
+#include /include/VUS.stan
+#include /include/lptn.stan
+#include /include/dss.stan
 }
 data {
   int<lower=1> n1;                                        // No. of concentrations for drug 1
