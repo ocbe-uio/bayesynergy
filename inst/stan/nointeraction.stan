@@ -1,20 +1,8 @@
 // A version of gp_grid.stan that only estimates f = p0. Used for computing the Bayes factor
 functions{
-  real lptn(real rho, real z, real lambda, real tau){
-    if (fabs(z) <= tau){
-      // return (-z^2/2);
-      return std_normal_lpdf(z);
-    }
-    else {
-      real logt = log(tau);
-      real logl = log(lambda);
-      // real logabsz = log(fabs(z));
-      real logabsz = log(fmax(fabs(z),1.0001)); // Small hack to avoid numeric instability in next line
-      // real lpdf = (-tau^2/2) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
-      real lpdf = std_normal_lpdf(tau) + logt - logabsz + (lambda+1)*(log(logt)-log(logabsz));
-      return lpdf;
-    }
-  }
+#include /include/VUS.stan
+#include /include/lptn.stan
+#include /include/dss.stan
 }
 data {
   int<lower=1> n1;                                        // No. of concentrations for drug 1
@@ -35,6 +23,10 @@ data {
 }
 transformed data{
   int N = (n1+n2+n1*n2+1)*nrep-nmissing;                  // Total number of observations
+  real c11 = min(x1);                       // Integration limits dss_1
+  real c12 = max(x1);                       // Integration limits dss_1
+  real c21 = min(x2);                       // Integration limits dss_2
+  real c22 = max(x2);                       // Integration limits dss_2
   real tauLPTN = inv_Phi((1+rho)/2);
   real lambdaLPTN = 2*inv(1-rho)*exp(normal_lpdf(tauLPTN | 0,1))*tauLPTN*log(tauLPTN);
 }
@@ -147,12 +139,7 @@ generated quantities {
     vector[N] noise;                          // The observation noise
     real la_1_param;                          // lower_asymptotes
     real la_2_param;                          // lower_asymptotes
-    real c11 = min(x1);                       // Integration limits dss_1
-    real c12 = max(x1);                       // Integration limits dss_1
-    real c21 = min(x2);                       // Integration limits dss_2
-    real c22 = max(x2);                       // Integration limits dss_2
-    vector[n2] B_rVUS;                        // Placeholder for trapezoidal rule
-    vector[n2] B_rVUS_p0;                     // Placeholder for trapezoidal rule
+
     // Setting up drug response function
     f[1,1] = 1;                               // At (-Inf,-Inf) dose response is one
     f[1,2:(n1+1)] = p01;                      // At (.,0) dose response is mono1
@@ -182,29 +169,14 @@ generated quantities {
       la_1_param = 0;
       la_2_param = 0;
     }
-    dss_1 = (c12-c11)+(la_1_param-1)/slope_1*(log10(1+10^(slope_1*(c12-log10_ec50_1))) - log10(1+10^(slope_1*(c11-log10_ec50_1))));
-    dss_1 = 100 * (1-dss_1/(c12-c11)); // Normalizing
-    dss_2 = (c22-c21)+(la_2_param-1)/slope_2*(log10(1+10^(slope_2*(c22-log10_ec50_2))) - log10(1+10^(slope_2*(c21-log10_ec50_2))));
-    dss_2 = 100 * (1-dss_2/(c22-c21)); // Normalizing
+
+    dss_1 = dss(c11,c12,la_1_param,slope_1,log10_ec50_1);
+    dss_2 = dss(c21,c22,la_2_param,slope_2,log10_ec50_2);
 
     // Calculating drug combination scores
-    for (i in 1:n2){
-      real b_rVUS = 0;
-      real b_rVUS_p0 = 0;
-      for (j in 2:n1){
-        b_rVUS += (x1[j]-x1[(j-1)])*(fc_interior[i,j]+fc_interior[i,(j-1)])/2;
-        b_rVUS_p0 += (x1[j]-x1[(j-1)])*((1-p0[i,j])+(1-p0[i,(j-1)]))/2;
-      }
-      B_rVUS[i] = b_rVUS;
-      B_rVUS_p0[i] = b_rVUS_p0;
-      if (i > 1){
-        rVUS_f += (x2[i]-x2[(i-1)])*(B_rVUS[i]+B_rVUS[(i-1)]) / 2;
-        rVUS_p0 += (x2[i]-x2[(i-1)])*(B_rVUS_p0[i]+B_rVUS_p0[(i-1)]) / 2;
-      }
-    }
-    // Normalizing
-    rVUS_f = 100 * rVUS_f / ((max(x1)-min(x1))*(max(x2)-min(x2)));
-    rVUS_p0 = 100 * rVUS_p0 / ((max(x1)-min(x1))*(max(x2)-min(x2)));
+    rVUS_f = VUS(fc_interior,x1,x2);
+    rVUS_p0 = VUS(1-p0,x1,x2);
+
     // Fixing zero valued integrals for so that sampler doesn't complain too much
     if (rVUS_f == 0){rVUS_f = uniform_rng(1e-6,1e-4);}
     if (rVUS_p0 == 0){rVUS_p0 = uniform_rng(1e-6,1e-4);}

@@ -12,13 +12,11 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4gp_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4gp_grid_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4nointeraction_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4splines_mod();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rcpp_module_boot_stan_fit4gp_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4gp_mod, 0},
     {"_rcpp_module_boot_stan_fit4gp_grid_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4gp_grid_mod, 0},
     {"_rcpp_module_boot_stan_fit4nointeraction_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4nointeraction_mod, 0},
     {"_rcpp_module_boot_stan_fit4splines_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4splines_mod, 0},
