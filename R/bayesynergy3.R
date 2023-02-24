@@ -133,7 +133,7 @@ bayesynergy3 <- function(y, x, drug_names=NULL, experiment_ID = NULL, units = NU
       
     } else if (method == "vb"){
       
-      fit = rstan::vb(stanmodels$gp_grid,stan_data, algorithm = "fullrank", ...)
+      fit = rstan::vb(stanmodels$gp_grid3,stan_data, algorithm = "fullrank", ...)
       
     }
   )
