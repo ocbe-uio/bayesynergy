@@ -7,10 +7,6 @@
 bayesynergy3(
   y,
   x,
-<<<<<<< HEAD
-  type = 3,
-=======
->>>>>>> 7a52fb0 (updated documentation)
   drug_names = NULL,
   experiment_ID = NULL,
   units = NULL,
@@ -26,11 +22,6 @@ bayesynergy3(
 
 \item{x}{three-column matrix of drug concentrations.}
 
-<<<<<<< HEAD
-\item{type}{integer; the type of model used. Must be one of the following: 1 (Splines), 2 (GP with squared exponential kernel), 3 (GP with Matérn kernel) or 4 (GP with rational quadratic kernel).}
-
-=======
->>>>>>> 7a52fb0 (updated documentation)
 \item{drug_names}{vector of size 2; names of the drugs utilized for the experiment.}
 
 \item{experiment_ID}{character; identifier of experiment, typically name of cell Line.}
@@ -41,11 +32,8 @@ bayesynergy3(
 
 \item{lambda}{numeric; the parameter controls the residual noise observed in the heteroscedastic model when f = 0.}
 
-<<<<<<< HEAD
-=======
 \item{method}{The method of estimation. Must be one of {`sampling`,`vb`} corresponding to full sampling, or variational Bayes.}
 
->>>>>>> 7a52fb0 (updated documentation)
 \item{control}{list; passed on to the stan sampler, e.g. for setting adapt_delta.}
 
 \item{...}{Arguments passed to \code{\link[rstan:sampling]{rstan::sampling}} or \code{\link[rstan:vb]{rstan::vb}} (e.g. iter, chains).}
