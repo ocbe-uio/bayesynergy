@@ -37,7 +37,7 @@ library(plotly)
   nrep = ncol(as.matrix(x$data$y))
   # Need to find coordinates for the observed variables in this new coordinate system
   Xgrid = expand.grid(unqX1,unqX2)
-  Xgrid = Xgrid[order(Xgrid["Var1"],Xgrid["Var2"]),]
+  Xgrid = Xgrid[order(Xgrid[,"Var1"],Xgrid[,"Var2"]),]
   
   mono1 = data.frame(
     x = rep(log10(x$data$x[which((x$data$x[,2]==0) & (x$data$x[,1] != 0)),1]),nrep),
