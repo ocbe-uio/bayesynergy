@@ -2,12 +2,12 @@ pandoc: 2.19.2
 pkgdown: 2.0.7
 pkgdown_sha: ~
 articles:
-  Diagonsis_and_robustness: Diagonsis_and_robustness.html
+  Advanced_topics: Advanced_topics.html
+  Example_screen: Example_screen.html
+  Example_single: Example_single.html
   Model: Model.html
-  Single_experiement: Single_experiement.html
-  Synergy_screen: Synergy_screen.html
   bayesynergy: bayesynergy.html
-last_built: 2023-05-14T18:48Z
+last_built: 2023-05-16T18:55Z
 urls:
   reference: https://ocbe-uio.github.io/bayesynergy/reference
   article: https://ocbe-uio.github.io/bayesynergy/articles
