@@ -1,4 +1,12 @@
 url: https://ocbe-uio.github.io/bayesynergy/
 template:
   bootstrap: 5
-
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - bayesynergy
+  - Model
+  - Example_single
+  - Example_screen
+  - Advanced_topics

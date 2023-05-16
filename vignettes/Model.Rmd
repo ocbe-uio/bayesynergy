@@ -1,14 +1,12 @@
 ---
-title: "Model"
-author: "Leiv Rønneberg"
-date: "05/09/2022"
+title: "Mathematical model"
 output: 
   rmarkdown::html_vignette:
     toc: true
 bibliography: references.bib
 vignette: >
   \usepackage[utf8]{inputenc}
-  %\VignetteIndexEntry{Model}
+  %\VignetteIndexEntry{Mathematical model}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   markdown: 
@@ -129,32 +127,7 @@ allow homoscedastic noise as an option.
 
 
 
-### Including controls
 
-The positive and negative controls essentially control the
-signal-to-noise ratio in cell viability assays. If the user has access
-to these, they can be included in the model to help calibrate the
-posterior distribution -- particularly in the case with zero replicates.
-
-Let $\xi^-_k$ and $\xi^+_l$ denote the negative and positive controls
-for $k=1,\ldots,n_-$ and $l=1,\ldots,n_+$. These measurements are raw
-readings from the plate and are used to calculate cell viability. For an
-additional well, treated with drug concentration $\mathbf{x}_i$, we
-denote the raw output by $\xi_i$, and calculate cell viability for this
-well by the formula: $$
-y_i = \frac{\xi_i-\tilde{\xi^+}}{\tilde{\xi^-}-\tilde{\xi^+}},
-$$ where $\tilde{\xi^-}$ and $\tilde{\xi^+}$ denotes some measure of
-centrality of the positive and negative controls, typically the mean or
-median.
-
-The controls can themselves be passed through this function and
-converted to % viability. From the variances of these normalized
-controls, $\lambda$ can be set as indicated above. And the negative
-controls can be added directly into the algorithm. Negative controls
-represents unhindered cell growth, and can be thought of as samples from
-the dose-response function $f(\mathbf{x})$ at concentration
-$\mathbf{x}=(0,0)$. These can then be added directly to the
-$\texttt{bayesynergy}$ function in the same way as regular observations.
 
 ## Full model specification
 
@@ -187,9 +160,6 @@ when one of the drugs is at zero concentration.
 From the posterior dose-response function $f | \mathbf{y}$, we derive a
 number of summary statistics concerning efficacy, synergy and
 antagonism.
-
-
-
 
 
 ### Monotherapy summaries
@@ -262,60 +232,7 @@ with respect to its standard deviation. $$
 \text{Synergy score} = \frac{\text{mean}(VUS(\Delta^{-}))}{\text{sd}(VUS(\Delta^{-}))}.
 $$
 
-## Synergy classification
 
-Frequently, it is of interest to classify an experiment as *synergistic*
-or *antagonistic*. Usually, this has been done by thresholding the
-synergy measure at a certain level, declaring e.g. everything above 10
-as synergistic, everything below -10 antagonistic, and anything in
-between as additive (no interaction). The problem with this is that it
-completely ignores the underlying measurement error, and as a
-consequence the thresholding procedure can lead to misclassification.
-Large synergistic effects might be classified as synergistic, but in
-reality the effect cannot be discerned from the background noise. In the
-same manner, genuine synergistic effects that are too small, for example
-because the dose-ranges are a bit off, will also be misclassified. By
-incorporating the uncertainty into the classification it can be done in
-a more principled manner.
-
-In Bayesian inference, we can compute what is know as the model
-*evidence*. That is, given a probabilistic model $\mathcal{M}$, and some
-data we think is generated from it, $\mathcal{D}$, the evidence is
-defined as the probability of the model given the data,
-$P(\mathcal{M} \vert \mathcal{D})$. We can use this quantity to compare
-different models, in particular when comparing two distinct models we
-can define the **Bayes Factor,** $\text{BF}_{10}$: $$
-\text{BF}_{10}=\frac{P(\mathcal{D}\vert\mathcal{M}_1)}{P(\mathcal{D}\vert\mathcal{M}_0)} = \frac{P(\mathcal{M}_1 \vert \mathcal{D})}{P(\mathcal{M}_0 \vert \mathcal{D})}\frac{P(\mathcal{M}_1)}{P(\mathcal{M}_0)},
-$$ where $P(\mathcal{M}_1)$ and $P(\mathcal{M}_0)$ denotes the prior
-model probabilities. By defining $$
-\mathcal{M}_0: f(\mathbf{x}) = p_0(\mathbf{x}) \\
-\mathcal{M}_1: f(\mathbf{x}) = p_0(\mathbf{x}) + \Delta(\mathbf{x}),
-$$ and computing $\text{BF}_{10}$, the Bayes factor gives information on
-whether the interaction surface needs to be included in the model. A
-high value indicates that $\mathcal{M}_1$ is preferred over
-$\mathcal{M}_0$, and thus that there most likely is some interaction in
-the experiment. One still needs to make a cutoff, but it will be less
-arbitrary by connecting it directly to the uncertainty in the model, and
-model evidence. The thresholding itself can be done according to e.g.
-the table in @Kass1995:
-
-```{r,echo=F,cache=T}
-df = data.frame("BF10" = c("1 to 3.2","3.2 to 10","10 to 100",">100"),"Evidence against M0" = c("Not worth more than a bare mention","Substantial","Strong","Decisive"))
-knitr::kable(df,col.names = c("$\\text{BF}_{10}$","Evidence against $\\mathcal{M}_0$"),align="cc",format = "simple")
-```
-
-
-The Bayes factor only gives information about whether or not an
-interaction is present. Depending on the classification task, one still
-needs to decide if the effect is synergistic or antagonistic. For this
-one could e.g. use the integral of the interaction surface,
-$\text{VUS}(\Delta)$, if this is negative the experiment is coded as
-synergistic, if positive it is coded as antagonistic.
-
-The calculation of the Bayes factor is implemented directly in the
-`bayesynergy` function, and can be calculated simply by adding
-`bayes_factor = T` to the call. Model evidence and the Bayes factor
-itself is computed via the `bridgesampling` package (@Gronau2020).
 
 
 # References

@@ -1,22 +1,19 @@
 ---
-title: "bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments"
-author: "Leiv Rønneberg"
-date: "22/02/2023"
-output: 
-  rmarkdown::html_vignette:
-    toc: true
-bibliography: references.bib
+title: "Introduction to bayesynergy"
+description: >
+  Learn how to get started with the basics of bayesynergy
+output: rmarkdown::html_vignette
 vignette: >
-  \usepackage[utf8]{inputenc}
-  %\VignetteIndexEntry{bayesynergy: flexible Bayesian modelling of synergistic interaction effects in in-vitro drug combination experiments}
+  %\VignetteIndexEntry{Introduction to bayeysnergy}
   %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 editor_options: 
   markdown: 
     wrap: 72
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 ```
 
 ```{css, echo=FALSE}
@@ -31,14 +28,12 @@ pre[class] {
 ```
 
 
-# Introduction
-
 The `bayesynergy` R package implements a Bayesian semi-parametric
 regression model for estimating the dose-response function of *in-vitro*
 drug combination experiments. The Bayesian framework offers full
 uncertainty quantification of the dose response function and any derived
 summary statistics, as well as natural handling of replicates and
-missing data. The Bayesian model is implemented in Stan (@Stan_2020),
+missing data. The Bayesian model is implemented in [RStan](https://mc-stan.org/users/interfaces/rstan),
 taking advantage of the efficient 'No U-Turn Sampler' as well as
 variational Bayes for quick approximations of the true posterior.
 
@@ -47,8 +42,165 @@ a drug response experiment, parallel processing for large drug
 combination screen, as well as plotting tools for summarizing and
 comparing these.
 
+## Basic usage example
+
+To get started, simply load the package with
+
+```{r}
+library(bayesynergy)
+```
+
+We have included an example dataset from a large drug combination
+screening experiment on diffuse large B-cell lymphoma. To access it,
+simply run
+
+```{r}
+data("mathews_DLBCL")
+y <- mathews_DLBCL[[1]][[1]]
+x <- mathews_DLBCL[[1]][[2]]
+head(cbind(y,x))
+```
+
+where `y` contains the measured post-treatment viability, and `x` the corresponding drug concentrations of the two drugs.
+
+To fit the model, simply run
+
+```{r, eval=T, echo=T, results='hide', cache=T}
+fit <- bayesynergy(y,x)
+```
+
+and wait for the sampling process to complete. 
+
+The results can then be plotted to inspect the model fit e.g. for the monotherapies
+
+```{r, eval=T, fig.dim = c(7,5), fig.show="hold", results="hide", fig.keep = c(1)}
+plot(fit)
+```
+
+And similarly for the full dose-response surface in an interactive figure
+
+```{r 3dresponse, echo = F, cache = T, warning = FALSE, message = FALSE, fig.dim = c(7,5)}
+x = fit
+# Creating some stuff needed for plots
+library(plotly)
+
+  posterior = rstan::extract(x$stanfit)
+  n.save = length(posterior$lp__)
+  # We add lower-asymptote parameters if these are not estimated
+  if (!x$model$lower_asymptotes){
+    posterior$la_1 = rep(0,n.save)
+    posterior$la_2 = rep(0,n.save)
+  }
+  unqX1 = log10(sort(unique(x$data$x[,1])))[-1] # Removing -Inf here
+  unqX2 = log10(sort(unique(x$data$x[,2])))[-1] # Removing -Inf here
+  dx1 = mean(diff(unqX1))
+  dx2 = mean(diff(unqX2))
+  nrep = ncol(as.matrix(x$data$y))
+  # Need to find coordinates for the observed variables in this new coordinate system
+  Xgrid = expand.grid(unqX1,unqX2)
+  Xgrid = Xgrid[order(Xgrid[,"Var1"],Xgrid[,"Var2"]),]
+  
+  mono1 = data.frame(
+    x = rep(log10(x$data$x[which((x$data$x[,2]==0) & (x$data$x[,1] != 0)),1]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,2]==0) & (x$data$x[,1] != 0)),])
+  )
+  # Remove NA here
+  idx = !is.na(mono1$y)
+  mono1 = mono1[idx,]
+  
+  mono2 = data.frame(
+    x = rep(log10(x$data$x[which((x$data$x[,1]==0) & (x$data$x[,2] != 0)),2]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]==0) & (x$data$x[,2] != 0)),])
+  )
+  # Remove NA here
+  idx = !is.na(mono2$y)
+  mono2 = mono2[idx,]
+  
+  # Pull out indices we want
+  ii = x$data$indices[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0))]
+  # Also define residuals here
+  
+  combination = data.frame(
+    x1 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),1]),nrep),
+    x2 = rep(log10(x$data$x[which((x$data$x[,1]!=0) & (x$data$x[,2]!=0)),2]),nrep),
+    y = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]),
+    f = 0,
+    p0 = 0,
+    Delta = 0,
+    residuals = as.vector(as.matrix(x$data$y)[which((x$data$x[,1]!=0) & (x$data$x[,2] != 0)),]) - as.vector(x$posterior_mean$p0)[ii]
+  ) 
+  # Remove NA here
+  idx = !is.na(combination$y)
+  combination = combination[idx,]
+  
+  ####################################################################################
+  # Monotherapies
+  ####################################################################################
+  grid.size = 100
+  x.seq1 = seq(min(unqX1)-dx1,max(unqX1)+dx1,length.out = grid.size)
+  x.seq2 = seq(min(unqX2)-dx2,max(unqX2)+dx2,length.out = grid.size)
+  
+  y.seq1 = matrix(NA,nrow=grid.size,ncol=n.save)
+  y.seq2 = matrix(NA,nrow=grid.size,ncol=n.save)
+  for (i in 1:grid.size){
+    y.seq1[i,] = as.vector(posterior$la_1)+as.vector((1-posterior$la_1))/(1+10^(as.vector(posterior$slope_1)*(x.seq1[i]-as.vector(posterior$log10_ec50_1))))
+    y.seq2[i,] = as.vector(posterior$la_2)+as.vector((1-posterior$la_2))/(1+10^(as.vector(posterior$slope_2)*(x.seq2[i]-as.vector(posterior$log10_ec50_2))))
+  }
+  df1 = data.frame(
+    x = x.seq1,
+    mean = apply(y.seq1,1,mean),
+    median = apply(y.seq1,1,median),
+    lower = apply(y.seq1,1,quantile, probs=0.025),
+    upper = apply(y.seq1,1,quantile, probs=0.975)
+  )
+  df2 = data.frame(
+    x = x.seq2,
+    mean = apply(y.seq2,1,mean),
+    median = apply(y.seq2,1,median),
+    lower = apply(y.seq2,1,quantile, probs=0.025),
+    upper = apply(y.seq2,1,quantile, probs=0.975)
+  )
+
+  # Response
+    z_response = x$posterior_mean$f[-1,-1]
+    fig = plot_ly(x = unqX1, y = unqX2, z = z_response)
+    fig = fig %>% add_surface(cmin=0,cmax=1)
+    fig = fig %>% add_trace(x = combination$x1, y = combination$x2, z = combination$y,
+                            type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="black",symbol=104),name = "Observed")
+    fig = fig %>% plotly::layout(scene = list(zaxis = list(range=c(min(min(0,c(mono1$y,mono2$y,combination$y))),max(max(1,c(mono1$y,mono2$y,combination$y)))),
+                                                   title="% Viability",titlefont = list(size = 12)),
+                                              xaxis = list(title=paste(x$data$units[1],x$data$drug_names[1]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>"),
+                                              yaxis = list(title=paste(x$data$units[2],x$data$drug_names[2]),titlefont = list(size = 12),tickprefix="10<sup>",tickfont=list(size=10),ticksuffix="</sup>")),
+                         title = paste("Response surface:",x$data$experiment_ID,":",x$data$drug_names[1],"+",x$data$drug_names[2]))
+    fig = fig %>% add_paths(x = df1$x, y = (min(unqX2)-mean(diff(unqX2))), z = df1$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_paths(x = (min(unqX1)-mean(diff(unqX1))), y = df2$x, z = df2$mean, line = list(color = "grey", dash = "dash",width=4), showlegend = F) 
+    fig = fig %>% add_trace(x = mono1$x, y = (min(unqX2)-mean(diff(unqX2))), z = mono1$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    fig = fig %>% add_trace(x = (min(unqX1)-mean(diff(unqX1))), y = mono2$x, z = mono2$y, type = "scatter3d", mode = "markers",
+                            marker = list(size=3,color="grey",symbol=104), showlegend = F)
+    for (i in 1:length(unqX1)){
+      fig = fig %>% add_trace(x = rep(unqX1[i],length(unqX1)), y = unqX2, z = z_response[,i]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    for (i in 1:length(unqX2)){
+      fig = fig %>% add_trace(x = unqX1, y = rep(unqX2[i],length(unqX2)), z = z_response[i,]+0.003, type="scatter3d", mode="lines",
+                              showlegend = F, line = list(color="grey", width = 1, dash = "dot"))
+    }
+    
+    response_3d = fig
+    
+    response_3d
+  
+  
+```
+
+Quantitative measures of drug response and synergy, alongside summaries of the model parameters can be extracted by running
+```{r}
+summary(fit)
+```
+
+For a more detailed look into the functionality of the package, please see the other vignettes.
 
 
 
-
-# References

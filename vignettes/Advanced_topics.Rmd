@@ -1,0 +1,198 @@
+---
+title: "Advanced topics"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+bibliography: references.bib
+vignette: >
+  \usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{Advanced topics}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Diagnosing errors and warnings
+
+Sometimes, the `bayesynergy` function may return with a warning.
+Ideally, we don't want any warnings at all, and they should be examined
+closely, as posterior samples could be unreliable. Usually, the warning
+will tell the user how to fix the problem at hand, e.g. by running the
+chains for longer (set `iter` higher), or setting `adapt_delta` higher.
+See [<https://mc-stan.org/misc/warnings.html>] for some general tips.
+
+## Divergent Transitions
+
+Most commonly, the sampler might complain about divergent transitions.
+The warning will typically look like this:
+
+```         
+## Warning: There were 2316 divergent transitions after warmup. See
+## http://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.
+```
+
+This is indicative of a posterior geometry that is tricky to explore. In
+the case where there is only a few divergent transitions, the usual
+trick is to set `adapt_delta` to a higher value, i.e. larger than 0.9
+which is the default. This can be done through the `control` option in
+the `bayesynergy` call:
+
+```{r, eval = F}
+fit = bayesynergy(y, x, control = list(adapt_delta = 0.99))
+```
+
+However, the case above, where there are 2316 divergent transitions, is
+indicative of a misspecified model. In my experience, this can happen
+for a few reasons.
+
+-   Estimating 'flat' monotherapies
+    -   i.e. when the parameter $l$ is close to one. This can have the
+        effect of making the other monotherapy parameters
+        unidentifiable.
+    -   this can usually be alleviated by setting
+        `lower_asymptotes = FALSE` in the call. Unless one is
+        specifically interested in these parameters, there are no reason
+        to estimate them -- the model fit will typically still be good
+        without them.
+-   Estimating $l$ in the heteroscedastic model
+    -   the model can struggle in this setting, particularly if there
+        are none or few replicates.
+    -   choose a homoscedastic model instead.
+-   'Wrong' $\lambda$ value
+    -   sometimes setting $\lambda$ much lower than the initial setting
+        can help with a better fit. This is particularly true if
+        viability scores close to zero (or negative) are truncated or
+        set to exactly zero.
+
+# Robustness against outliers
+
+We provide a version of the model that is more robust against inevitable
+outliers in dose=response data. This is done by swapping out two
+components of the model formulation, the likelihood and the prior for
+kernel hyperparameters.
+
+For the likelihood, we utilise the log-Pareto-tailed Normal (LPTN)
+distribution with mean $\mu$ and standard deviation $\sigma$, as
+described in @Gagnon2020 which takes the form $$
+f(x)=
+\begin{cases}
+\frac{1}{\sigma}\phi\left(\frac{x-\mu}{\sigma}\right) & \text{if } \vert\frac{x-\mu}{\sigma}\vert \leq \tau \\
+\frac{1}{\sigma}\phi(\tau)\frac{\tau}{\vert\frac{x-\mu}{\sigma}\vert}\left(\frac{\log (\tau)}{\log(\vert\frac{x-\mu}{\sigma}\vert)}\right)^{\lambda+1} & \text{if } \vert\frac{x-\mu}{\sigma}\vert > \tau
+\end{cases}
+$$ where $\phi$ denotes the standard normal pdf. The parameters
+$(\tau,\lambda)$ are controlled by the user-specified hyperparameter
+$\rho \in (2\Phi(1)-1,1)$ as $$
+\tau=\Phi^{-1}((1+\rho)/2),  \ \ \ \ \lambda=2(1-\rho)^{-1}\phi(\tau)\tau\log(\tau)
+$$
+
+The robust likelihood can be utilized by setting `robust = T` when
+calling the`bayesynergy` function. The user-specified parameter $\rho$
+can be set by the `rho` argument, by default set to $0.9$.
+
+For the kernel, we recommend utilising the Matérn kernel with a
+Penalized Complexity (PC) prior on the kernel hyperparameters. The PC
+prior for the Matern covariance was described in @Fuglstad2018, and
+strongly encourages small deviations from the null model, i.e. high
+probability of an interaction term being zero. The PC prior for the
+kernel hyperparameters $(\sigma_f^2,\ell)$ (in the 2-dimensional case)
+takes the form $$
+\pi(\sigma_f^2,\ell)=\tilde{\lambda}_1\tilde{\lambda}_2\ell^{-2}\sigma_f^{-1}\exp\left(-\tilde{\lambda}_1\ell^{-1}-\tilde{\lambda}_2\sigma_f\right),
+$$ where $(\tilde{\lambda}_1,\tilde{\lambda}_2)$ are set to reflect
+prior beliefs $P(\ell < \ell_0)=\alpha_1$ and
+$P(\sigma_f^2 > \sigma^2_{f0})=\alpha_2$ by $$
+\tilde{\lambda}_1=-\log(-\alpha_1)\ell \ \ \ \ \tilde{\lambda}_2=-\frac{\log(\alpha_2)}{\sigma_{f0}^2},
+$$ where $(\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)$ are hyperparameters
+that are set by the user. The PC prior can be enabled by setting
+`pcprior = T` when calling the `bayesynergy` function, and
+hyperparameters specified by the argument `pcprior_hypers`. By default,
+we recommend $(\ell_0,\alpha_1,\sigma_{f0}^2,\alpha_2)=(1,0.1,1,0.2)$.
+
+# Including controls
+
+The positive and negative controls essentially control the
+signal-to-noise ratio in cell viability assays. If the user has access
+to these, they can be included in the model to help calibrate the
+posterior distribution -- particularly in the case with zero replicates.
+
+Let $\xi^-_k$ and $\xi^+_l$ denote the negative and positive controls
+for $k=1,\ldots,n_-$ and $l=1,\ldots,n_+$. These measurements are raw
+readings from the plate and are used to calculate cell viability. For an
+additional well, treated with drug concentration $\mathbf{x}_i$, we
+denote the raw output by $\xi_i$, and calculate cell viability for this
+well by the formula: $$
+y_i = \frac{\xi_i-\tilde{\xi^+}}{\tilde{\xi^-}-\tilde{\xi^+}},
+$$ where $\tilde{\xi^-}$ and $\tilde{\xi^+}$ denotes some measure of
+centrality of the positive and negative controls, typically the mean or
+median.
+
+The controls can themselves be passed through this function and
+converted to % viability. From the variances of these normalized
+controls, $\lambda$ can be set as indicated above. And the negative
+controls can be added directly into the algorithm. Negative controls
+represents unhindered cell growth, and can be thought of as samples from
+the dose-response function $f(\mathbf{x})$ at concentration
+$\mathbf{x}=(0,0)$. These can then be added directly to the
+$\texttt{bayesynergy}$ function in the same way as regular observations.
+
+# Synergy classification
+
+Frequently, it is of interest to classify an experiment as *synergistic*
+or *antagonistic*. Usually, this has been done by thresholding the
+synergy measure at a certain level, declaring e.g. everything above 10
+as synergistic, everything below -10 antagonistic, and anything in
+between as additive (no interaction). The problem with this is that it
+completely ignores the underlying measurement error, and as a
+consequence the thresholding procedure can lead to misclassification.
+Large synergistic effects might be classified as synergistic, but in
+reality the effect cannot be discerned from the background noise. In the
+same manner, genuine synergistic effects that are too small, for example
+because the dose-ranges are a bit off, will also be misclassified. By
+incorporating the uncertainty into the classification it can be done in
+a more principled manner.
+
+In Bayesian inference, we can compute what is know as the model
+*evidence*. That is, given a probabilistic model $\mathcal{M}$, and some
+data we think is generated from it, $\mathcal{D}$, the evidence is
+defined as the probability of the model given the data,
+$P(\mathcal{M} \vert \mathcal{D})$. We can use this quantity to compare
+different models, in particular when comparing two distinct models we
+can define the **Bayes Factor,** $\text{BF}_{10}$: $$
+\text{BF}_{10}=\frac{P(\mathcal{D}\vert\mathcal{M}_1)}{P(\mathcal{D}\vert\mathcal{M}_0)} = \frac{P(\mathcal{M}_1 \vert \mathcal{D})}{P(\mathcal{M}_0 \vert \mathcal{D})}\frac{P(\mathcal{M}_1)}{P(\mathcal{M}_0)},
+$$ where $P(\mathcal{M}_1)$ and $P(\mathcal{M}_0)$ denotes the prior
+model probabilities. By defining $$
+\mathcal{M}_0: f(\mathbf{x}) = p_0(\mathbf{x}) \\
+\mathcal{M}_1: f(\mathbf{x}) = p_0(\mathbf{x}) + \Delta(\mathbf{x}),
+$$ and computing $\text{BF}_{10}$, the Bayes factor gives information on
+whether the interaction surface needs to be included in the model. A
+high value indicates that $\mathcal{M}_1$ is preferred over
+$\mathcal{M}_0$, and thus that there most likely is some interaction in
+the experiment. One still needs to make a cutoff, but it will be less
+arbitrary by connecting it directly to the uncertainty in the model, and
+model evidence. The thresholding itself can be done according to e.g.
+the table in @Kass1995:
+
+```{r,echo=F,cache=T}
+df = data.frame("BF10" = c("1 to 3.2","3.2 to 10","10 to 100",">100"),"Evidence against M0" = c("Not worth more than a bare mention","Substantial","Strong","Decisive"))
+knitr::kable(df,col.names = c("$\\text{BF}_{10}$","Evidence against $\\mathcal{M}_0$"),align="cc",format = "simple")
+```
+
+
+The Bayes factor only gives information about whether or not an
+interaction is present. Depending on the classification task, one still
+needs to decide if the effect is synergistic or antagonistic. For this
+one could e.g. use the integral of the interaction surface,
+$\text{VUS}(\Delta)$, if this is negative the experiment is coded as
+synergistic, if positive it is coded as antagonistic.
+
+The calculation of the Bayes factor is implemented directly in the
+`bayesynergy` function, and can be calculated simply by adding
+`bayes_factor = T` to the call. Model evidence and the Bayes factor
+itself is computed via the `bridgesampling` package (@Gronau2020).
+
+# References
