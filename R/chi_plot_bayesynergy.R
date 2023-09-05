@@ -575,5 +575,454 @@ plot.bayesynergy_chiversion <- function(x,
 
 
 
+# _____________ ----
+# _____________ ----
+
+# multiple ----
+
+#' data("mathews_DLBCL")
+experiment1 <- list(y = mathews_DLBCL[[1]][[1]],
+                    x = mathews_DLBCL[[1]][[2]],
+                    drug_names = c("ispinesib","ibrutinib"))
+experiment2 <- list(y = mathews_DLBCL[[2]][[1]],
+                  x = mathews_DLBCL[[2]][[2]],
+                   drug_names = c("canertinib","ibrutinib"))
+experiments <- list(experiment1,experiment2)
+
+# fit <- synergyscreen(experiments)
+# plot(fit)
+
+x <- fit
+
+plot.synergyscreen_chiversion <- function(x, 
+                                          groupbyExperimentID = T, 
+                                          save_plots = FALSE, 
+                                          path = NULL, 
+                                          plotdevice = "pdf", ...){
+  
+  # Check for valid plotdevice
+  if (!(plotdevice %in% c("pdf","png"))){
+    stop("plotdevice must be one of {'pdf','png'}")
+  }
+  # Setting default path if note given
+  if (is.null(path)){
+    path = getwd()
+  }
+  # Check that path exists, if not create it
+  if (!dir.exists(path)){
+    dir.create(path)
+  }
+  # Put dirmark on file path
+  path = Sys.glob(path,dirmark = T)
+  
+  
+  # processing ----
+  # Extracting the dataframe needed from the output
+  synscores <- x$screenSummary
+  
+  
+  # Do some preprocessing to make sure we are able to average across the pairs correctly
+  # Particularly, if (drugA + drugB) and (drugB + drugA) are equal for two experimental IDs,
+  # they should be averaged, as they represent the same pair
+  # We do this alphabetically such that drug A comes earlier in the alphabet than drug B
+  
+  # add 2 col, replicates drug A and drug B columns
+  synscores <- synscores %>% mutate(`drugATMP` = `Drug A`, `drugBTMP` = `Drug B`)
+  synscores <- synscores %>% mutate(`Drug A` = ifelse(`Drug A` < `Drug B`,`Drug A`,`Drug B`))
+  synscores <- synscores %>% mutate(`Drug B` = ifelse(`Drug A` < `Drug B`,`Drug B`,`drugATMP`))
+  synscores <- select(synscores,-c(`drugATMP`,`drugBTMP`))
+  synscores <- synscores %>% mutate(`Drug Pair` = paste(`Drug A`,"+",`Drug B`))
+  
+  # Create a list per experiment ID
+  synscoreList <- synscores %>% dplyr::group_by(`Experiment ID`,.add=T) %>% group_split()
+  
+  # Average across all experimentID
+  synscoresAverage <- synscores %>% 
+    dplyr::group_by(`Drug A`,`Drug B`) %>% 
+    dplyr::summarise(`mean_syn` = mean(`Synergy Score`,na.rm=T),
+                     `max_syn` = min(`Synergy (mean)`,na.rm = T),
+                     `mad_syn` = mad(`Synergy (mean)`,na.rm=T),
+                     `mean_ant` = mean(`Antagonism Score`,na.rm=T),
+                     `max_ant` = max(`Antagonism (mean)`,na.rm=T),
+                     `mad_ant` = mad(`Antagonism (mean)`,na.rm=T),
+                     `mean_int` = mean(`Interaction (mean)`,na.rm=T),
+                     `abs_mean_int` = abs(`mean_int`),
+                     `mad_int` = mad(`Interaction (mean)`,na.rm=T),
+                     `n` = n(), .groups = "drop")
+  
+  
+  # For p3, we also create the mirror-image so that we can display both antagonism and synergy
+  synscores3AB <- synscoresAverage %>% mutate(`mean_int` = `mean_syn`)
+  synscores3BA <- synscoresAverage %>% mutate(`DrugATMP` = `Drug A`,
+                                              `Drug A` = `Drug B`,
+                                              `Drug B` = `DrugATMP`,
+                                              `mean_int` = `mean_ant`) %>% select(-c(`DrugATMP`))
+  synscores3 <- rbind(synscores3AB,synscores3BA)
+  
+  # Breaks set by quantiles
+  lower_breaks <- quantile(synscores3$mean_syn,probs=c(0,0.01,0.1,0.25))
+  upper_breaks <- sort(quantile(synscores3$mean_ant,probs=1-c(0,0.01,0.1,0.25)))
+  l <- max(abs(c(min(lower_breaks)-0.1,max(upper_breaks)+0.1)))
+  lower_breaks[1] <- -l
+  upper_breaks[4] <- l
+  breaks <- as.numeric(c(lower_breaks,upper_breaks))
+  breaks <- sort(jitter(breaks))
+  # Delta_col_palette <- inlmisc::GetColors(scheme = "BuRd")
+  Delta_col_palette <- c("#2066AC", "#60A3CC", "#BCDAEA", "#F7F7F7", "#FBC9AF", "#E0775E", "#B2182B")
+  
+  
+  #Switching back some of Drug A and Drug B, as it makes p3 nicer
+  # synscoresAverage <- synscoresAverage %>% mutate(`DrugATMP` = `Drug A`)
+  # switchIDX = sample(1:nrow(synscoresAverage),floor(nrow(synscoresAverage)/2))
+  # synscoresAverage$`Drug A`[switchIDX] = synscoresAverage$`Drug B`[switchIDX]
+  # synscoresAverage$`Drug B`[switchIDX] = synscoresAverage$DrugATMP[switchIDX]
+  # synscoresAverage <- select(synscoresAverage,-c(`DrugATMP`))
+  
+  
+  # We need to give all experiments an "sd" value for the size in p3a, even the ones with only one observation
+  synscoresAverage$mad_syn[is.na(synscoresAverage$mad_syn)] <- 0
+  synscoresAverage$mad_ant[is.na(synscoresAverage$mad_ant)] <- 0
+  synscoresAverage$mad_int[is.na(synscoresAverage$mad_int)] <- 0
+  
+  
+  # Creating a function to label top synergy scores
+  in_quantile <- function(x, n = 5) {
+    # Pick out to get top and bottom 5
+    vec = rep(F,length(x))
+    vec[tail(order(x),n)] = T
+    return(vec)
+  }
+  
+  # Labeling top hits
+  synscoresAverage <- synscoresAverage %>% 
+    mutate(`Quantile` = ifelse(in_quantile(as.numeric(-`mean_syn`))|in_quantile(as.numeric(`mean_ant`)),
+                               paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA))) %>%
+    # Duplicate top hit annotations are removed. All annotations for transposed drug treatments are removed, only the annotation for one drug pair is kept.
+    mutate(`Quantile` = ifelse(!duplicated(t(apply(synscoresAverage[c("Drug A", "Drug B")], 1, sort))) == TRUE, `Quantile`, as.character(NA)))
+  
+  
+  # Duplicate experimentID and drug pairs are also removed (there shouldn't be any)
+  synscoresAverage <- synscoresAverage[!duplicated(t(apply(synscoresAverage[c("Drug A", "Drug B")], 1, sort))),]
+  # Adding a colour variable for p1
+  synscoresAverage <- synscoresAverage %>% mutate(`colp1` = ifelse(`mean_ant` > -`mean_syn`,`max_ant`,`max_syn`))
+  
+  
+  
+  # p1: synergy v antagonism ----
+  # PLOT 1: Synergy vs. Antagonism across all experiments
+  
+  
+  p1 <- ggplot(synscoresAverage, aes(x = `mean_ant`, y = `mean_syn`,fill=`colp1`)) +
+    geom_point(color = "gray", shape = 21, aes(size = `mad_int`)) +
+    # geom_abline(intercept=0,slope=1, linetype = "dashed", alpha=0.3) +
+    scale_size_continuous(range = c(1.5, 4), name = "MAD") +
+    scale_fill_gradientn(colours = c("#2066AC","#F7F7F7","#B2182B"),
+                         values = scales::rescale(c(min(synscoresAverage$colp1,na.rm=T),max(synscoresAverage$colp1,na.rm=T))),
+                         name = "Max\nInteraction",
+                         limits = max(abs(synscoresAverage$colp1))*c(-1,1)) +
+    # limits = c(min(0,min(synscoresAverage$colp1,na.rm=T)),max(0,max(synscoresAverage$colp1,na.rm=T)))) +
+    geom_text_repel(aes(label = Quantile), color="black",  na.rm = TRUE, force = 1, direction = "both", point.padding = unit(1.2, "lines"), box.padding = unit(0.2, "lines"),
+                    segment.size = 0.2, segment.color = "black", nudge_x = 0.01, nudge_y = 0, hjust = 0.5, size = 3) +
+    coord_cartesian(xlim = c(), clip = "off") +
+    
+    xlab("Antagonism") +
+    ylab("Synergy") +
+    ggtitle("Average interaction across all experiments") +
+    guides() +
+    theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),legend.title = element_text(size=10),
+          legend.justification="center", legend.box.margin=margin(1,0,0,0),
+          text = element_text(size = 12),  plot.caption = element_text(size = 12), plot.caption.position = "plot",
+          plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
+          axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 8, vjust = 1, hjust = 1))
+  
+  
+  # p2: synergy per drug -----
+  #PLOT 2: Synergy per drug across all experiments
+
+  
+  # Label top hits for each experiment ID
+  synscores <- synscores %>% dplyr::group_by(`Experiment ID`) %>% 
+    mutate(`Quantile` = ifelse(in_quantile(-as.numeric(`Synergy (mean)`),n=1), paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA)))
+  
+  
+  # Plotting only synergy for each experiment ID
+  p2 <- ggplot(synscores, aes(x = factor(`Experiment ID`), y = `Synergy (mean)`, fill = `Synergy (mean)`)) +
+    geom_point(aes(size = `Synergy (sd)`), colour="gray",pch = 21, alpha = 0.8) +
+    scale_size_continuous(trans = 'reverse', range = c(1, 4), name = "Std. dev") +
+    scale_fill_gradientn(colours = c("#2066AC","#F7F7F7"),
+                         values = scales::rescale(c(min(synscores$`Synergy (mean)`,na.rm = T),max(synscores$`Synergy (mean)`,na.rm=T))),
+                         limits = c(min(synscores$`Synergy (mean)`,na.rm = T),max(synscores$`Synergy (mean)`,na.rm=T))) +
+    scale_y_continuous(name = "Synergy") +
+    geom_text_repel(aes(label = Quantile), na.rm = TRUE, force = 1, direction = "both", point.padding = unit(1.2, "lines"), box.padding = unit(0.2, "lines"),
+                    segment.size = 0.2, segment.color = "black", nudge_x = 0.01, nudge_y = 0, hjust = 0.5, size = 3) +
+    xlab("") +
+    ylab("Synergy") +
+    ggtitle("Synergy per experiment ID") +
+    guides()  +
+    theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),
+          legend.position = "bottom", legend.title = element_text(size=10), legend.title.align = 0.5, legend.justification="center", legend.direction = "horizontal", legend.box.margin=margin(.1,0,0,0),
+          text = element_text(size = 12),  plot.caption = element_text(size = 12), plot.caption.position = "plot",
+          plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
+          axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1))
+  
+  
+  # p3: synergy antagonism pairwise -----
+  # PLOT 3: Synergy & Antagonism pairwise
+
+  
+  # Function for labels in p3
+  label_Function <- function(x) {
+    tmp <- c()
+    # print(x)
+    if (length(x) == 2){
+      tmp = c("","Top 1%\nantagonistic")
+    }
+    else if (length(x) == 6){
+      tmp = c("Top 1%\nsynergistic","Top 10%\nsynergistic","Top 25%\nsynergistic","\nNo effect","Top 25%\nantagonistic","Top 10%\nantagonistic")
+    }
+    return(tmp)
+  }
+  
+  p3 <- ggplot(data = synscores3, mapping = aes_string(x = "`Drug B`", y = "`Drug A`", fill = "`mean_int`")) +
+    geom_point(color = "gray", shape = 21, aes_string(size = "`mad_int`")) +
+    scale_size_continuous(range = c(2, 5), name = "MAD") +
+    scale_fill_stepsn(colors = Delta_col_palette,
+                      breaks = breaks,
+                      values = scales::rescale(breaks),
+                      limits = c(breaks[1]*0.99,breaks[8]*0.99),
+                      labels = label_Function,
+                      guide = guide_coloursteps(even.steps = T,
+                                                show.limits = T,
+                                                title = NULL,
+                                                barheight = unit(3.3, "in"),
+                                                label.vjust = 1.5,order=1)) +
+    ggtitle("Average pairwise drug interaction across all experiments") +
+    coord_cartesian(clip = 'off') +
+    theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),legend.title = element_text(size=10),
+          legend.justification="center", legend.box.margin=margin(1,0,0,0),
+          text = element_text(size = 12),  plot.caption = element_text(size = 12), plot.caption.position = "plot",
+          plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
+          axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1),
+          axis.text.y = element_text(size = 8, vjust = 0.3, hjust = 1))
+  
+  if (length(synscoreList) > 1){
+    if (!save_plots){
+      print(p1)
+      readline("Press key for next plot")
+      print(p2)
+      readline("Press key for next plot")
+      print(p3)
+      readline("Press key for next plot")
+    } else { # Save plots locally
+      # First plot
+      file.name = paste0(path,paste("Average_interaction",sep = "_"))
+      if (plotdevice == "pdf"){
+        file.name.pdf = paste0(file.name,".pdf")
+        cairo_pdf(file=file.name.pdf, ...)
+      } else {
+        file.name.png = paste0(file.name,".png")
+        png(filename = file.name.png, ...)
+      }
+      print(p1)
+      dev.off()
+      # Second plot
+      file.name = paste0(path,paste("Average_synergy",sep = "_"))
+      if (plotdevice == "pdf"){
+        file.name.pdf = paste0(file.name,".pdf")
+        cairo_pdf(file=file.name.pdf, ...)
+      } else {
+        file.name.png = paste0(file.name,".png")
+        png(filename = file.name.png, ...)
+      }
+      print(p2)
+      dev.off()
+      # Third plot (a)
+      file.name = paste0(path,paste("Average_pairwise_interaction",sep = "_"))
+      if (plotdevice == "pdf"){
+        file.name.pdf = paste0(file.name,".pdf")
+        cairo_pdf(file=file.name.pdf, ...)
+      } else {
+        file.name.png = paste0(file.name,".png")
+        png(filename = file.name.png, ...)
+      }
+      print(p3)
+      dev.off()
+    }
+    
+  }
+
+  
+  
+    
+  # _____ ----
+  # PLOT 4-6: Synergy vs. Antagonism per experiment ID
+
+  if (groupbyExperimentID){
+    # this is specified in the plotting function
+    # true by default
+    
+    # if (length(synscoreList) > 1){
+    for (i in 1:length(synscoreList)){
+      # i <- 1
+      synSlice <- synscoreList[[i]]
+      
+      # Labeling top hits
+      synSlice <- synSlice %>% mutate(`Quantile` = ifelse(in_quantile(-as.numeric(`Synergy (mean)`))|in_quantile(as.numeric(`Antagonism (mean)`)),
+                                                          paste(`Drug A`, "+", `Drug B`, sep = " "), as.character(NA))) %>%
+        # Duplicate top hit annotations are removed. All annotations for transposed drug treatments are removed, only the annotation for one drug pair is kept.
+        mutate(`Quantile` = ifelse(!duplicated(t(apply(synSlice[c("Drug A", "Drug B")], 1, sort))) == TRUE, `Quantile`, as.character(NA)))
+      # Duplicate drug pairs are also removed.
+      
+      synSlice <- synSlice[!duplicated(t(apply(synSlice[c("Drug A", "Drug B")], 1, sort))),]
+      
+      # Adding a colour variable for p1
+      synSlice <- synSlice %>% mutate(`colp1` = ifelse(`Antagonism (mean)` > -`Synergy (mean)`,`Antagonism (mean)`, `Synergy (mean)`))
+      
+      
+      # For p6, we also create the mirror-image so that we can display both antagonism and synergy
+      synscores3AB <- synSlice %>% mutate(`mean_int` = `Synergy (mean)`)
+      synscores3BA <- synSlice %>% mutate(`DrugATMP` = `Drug A`,
+                                          `Drug A` = `Drug B`,
+                                          `Drug B` = `DrugATMP`,
+                                          `mean_int` = `Antagonism (mean)`) %>% select(-c(`DrugATMP`))
+      synscores3 = rbind(synscores3AB,synscores3BA)
+      
+      # synscores3 <- synscores3 %>% mutate(`mean_int` = `mean_int`-mean(`mean_int`))
+      
+      # Breaks set by quantiles
+      lower_breaks = quantile(synscores3$`Synergy (mean)`,probs=c(0,0.01,0.1,0.25))
+      upper_breaks = sort(quantile(synscores3$`Antagonism (mean)`,probs=1-c(0,0.01,0.1,0.25)))
+      l = max(abs(c(min(lower_breaks)-0.1,max(upper_breaks)+0.1)))
+      lower_breaks[1] = -l
+      upper_breaks[4] = l
+      breaks = as.numeric(c(lower_breaks,upper_breaks))
+      breaks = sort(jitter(breaks))
+      
+      
+      # Center
+      
+      
+      #Switching back some of Drug A and Drug B, as it makes p6 nicer
+      # synSlice <- synSlice %>% mutate(`DrugATMP` = `Drug A`)
+      # switchIDX = sample(1:nrow(synSlice),floor(nrow(synSlice)/2))
+      # synSlice$`Drug A`[switchIDX] = synSlice$`Drug B`[switchIDX]
+      # synSlice$`Drug B`[switchIDX] = synSlice$DrugATMP[switchIDX]
+      # synSlice <- select(synSlice,-c(`DrugATMP`))
+      
+      ###########################################################################################
+      ####### PLOT 4: Synergy vs. Antagonism per experiment ID
+      ###########################################################################################
+      
+      p4 = ggplot(synSlice, aes(x = `Antagonism (mean)`, y = `Synergy (mean)`,fill=`colp1`)) +
+        geom_point(color = "gray", shape = 21, aes(size = `Interaction (sd)`)) +
+        scale_size_continuous(trans = "reverse",range = c(1.5, 4), name = "Std. dev.") +
+        scale_fill_gradientn(colours = c("#2066AC","#F7F7F7","#B2182B"),
+                             values = scales::rescale(c(min(synSlice$colp1,na.rm=T),max(synSlice$colp1,na.rm=T))),
+                             name = "Interaction",
+                             limits = max(abs(synSlice$colp1))*c(-1,1)) +
+        geom_text_repel(aes(label = Quantile), color="black",  na.rm = TRUE, force = 1, direction = "both", point.padding = unit(1.2, "lines"), box.padding = unit(0.2, "lines"),
+                        segment.size = 0.2, segment.color = "black", nudge_x = 0.01, nudge_y = 0, hjust = 0.5, size = 3) +
+        coord_cartesian(xlim = c(), clip = "off") +
+        facet_grid(`Experiment ID`~.) +
+        xlab("Antagonism") +
+        ylab("Synergy") +
+        ggtitle(paste("Synergy vs. Antagonism: ",synSlice$`Experiment ID`[1])) +
+        guides() +
+        theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),legend.title = element_text(size=10),
+              legend.justification="center", legend.box.margin=margin(1,0,0,0),
+              text = element_text(size = 12),  plot.caption = element_text(size = 12), plot.caption.position = "plot",
+              plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
+              axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1),
+              axis.text.y = element_text(size = 8, vjust = 1, hjust = 1))
+      
+      ###########################################################################################
+      ####### PLOT 5: Synergy per drug per experiment ID
+      ###########################################################################################
+      
+      
+      
+      ###########################################################################################
+      ####### PLOT 6: Synergy & Antagonism pairwise per Experiment ID
+      ###########################################################################################
+      
+      
+      p6 = ggplot(data = synscores3, mapping = aes_string(x = "`Drug B`", y = "`Drug A`", fill = "`mean_int`")) +
+        geom_point(color = "gray", shape = 21, aes_string(size = "`Interaction (sd)`")) +
+        scale_size(trans = "reverse",range = c(1, 4), name = "Std. dev.") +
+        scale_fill_stepsn(colors = Delta_col_palette,
+                          breaks = breaks,
+                          values = scales::rescale(breaks),
+                          limits = c(breaks[1]*0.9999,breaks[8]*0.9999),
+                          labels = label_Function,
+                          guide = guide_coloursteps(even.steps = T,
+                                                    show.limits = T,
+                                                    title = NULL,
+                                                    barheight = unit(3.3, "in"),
+                                                    label.vjust = 1.5,
+                                                    order=1)) +
+        theme(axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1)) +
+        ggtitle(paste("Pairwise drug interaction: ",synSlice$`Experiment ID`[1])) +
+        coord_cartesian(clip = 'off') +
+        facet_grid(`Experiment ID`~.) +
+        theme(plot.title = element_text(hjust = 0.5), legend.text = element_text(size = 8),legend.title = element_text(size=10),
+              legend.justification="center", legend.box.margin=margin(1,0,0,0),
+              text = element_text(size = 12),  plot.caption = element_text(size = 12), plot.caption.position = "plot",
+              plot.tag = element_text(hjust = 1, size = 18), plot.tag.position = c(1, 0.99),
+              axis.text.x = element_text(size = 8, angle = 45, vjust = 1, hjust = 1),
+              axis.text.y = element_text(size = 8, vjust = 0.3, hjust = 1))
+      
+      
+      
+      if (!save_plots){
+        print(p4)
+        readline("Press key for next plot")
+        print(p6)
+        readline("Press key for next plot")
+      } else { # Save plots locally
+        # First plot
+        file.name = paste0(path,paste(synSlice$`Experiment ID`[1],"Interaction",sep = "_"))
+        if (plotdevice == "pdf"){
+          file.name.pdf = paste0(file.name,".pdf")
+          cairo_pdf(file=file.name.pdf, ...)
+        } else {
+          file.name.png = paste0(file.name,".png")
+          png(filename = file.name.png, ...)
+        }
+        print(p4)
+        dev.off()
+        # Third plot (b)
+        file.name = paste0(path,paste(synSlice$`Experiment ID`[1],"Pairwise_interaction",sep = "_"))
+        if (plotdevice == "pdf"){
+          file.name.pdf = paste0(file.name,".pdf")
+          cairo_pdf(file=file.name.pdf, ...)
+        } else {
+          file.name.png = paste0(file.name,".png")
+          png(filename = file.name.png, ...)
+        }
+        print(p6)
+        dev.off()
+      }
+    }
+    # }
+    
+  }
+  
+  
+  
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
