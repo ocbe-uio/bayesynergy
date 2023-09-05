@@ -7,6 +7,5 @@ Icon
 .github
 ^bayesynergy\.Rproj$
 ^_pkgdown\.yml$
-^docs$
 ^pkgdown$
 ^\.github$
