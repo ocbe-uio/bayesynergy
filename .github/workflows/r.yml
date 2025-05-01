@@ -35,17 +35,17 @@ jobs:
 
         # Checking out code -------------------------------------- #
         - name: Checking out the repository
-          uses: actions/checkout@v2
+          uses: actions/checkout@v4
 
         # Setting up environment --------------------------------- #
         - name: Setting up R ${{ matrix.config.r }} on ${{ matrix.config.os }}
-          uses: r-lib/actions/setup-r@v2
+          uses: r-lib/actions/setup-r@v4
           with:
             r-version: ${{ matrix.config.r }}
 
         # Installing Pandoc -------------------------------------- #
         - name: Installing Pandoc
-          uses: r-lib/actions/setup-pandoc@v2
+          uses: r-lib/actions/setup-pandoc@v4
 
         # Querying dependencies ---------------------------------- #
         - name: Querying dependencies
@@ -64,7 +64,7 @@ jobs:
 
         # Restoring R package cache ------------------------------ #
         - name: Restoring R package cache
-          uses: actions/cache@v2
+          uses: actions/cache@v4
           with:
             path: ${{ env.R_LIBS_USER }}
             key: ${{ runner.os }}-${{ hashFiles('.github/R-version') }}>
