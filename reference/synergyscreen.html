@@ -68,7 +68,7 @@
 
 
 <dt id="arg-return-samples">return_samples<a class="anchor" aria-label="anchor" href="#arg-return-samples"></a></dt>
-<dd><p>logical; if TRUE, the function returns the full fitted <code><a href="BayeSyneRgy.html">bayesynergy</a></code> object.</p></dd>
+<dd><p>logical; if TRUE, the function returns the full fitted <code>bayesynergy</code> object.</p></dd>
 
 
 <dt id="arg-save-raw">save_raw<a class="anchor" aria-label="anchor" href="#arg-save-raw"></a></dt>
@@ -100,12 +100,12 @@
 
 
 <dt id="arg-bayesynergy-params">bayesynergy_params<a class="anchor" aria-label="anchor" href="#arg-bayesynergy-params"></a></dt>
-<dd><p>list; parameters to be passed to the bayesynergy function. See <a href="BayeSyneRgy.html">bayesynergy</a> for details.</p></dd>
+<dd><p>list; parameters to be passed to the bayesynergy function. See bayesynergy for details.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list containing two elements</p><table class="table table"><tr><td>screenSummary</td><td>data frame, posterior summary statistics for each experiment.</td></tr><tr><td>failed</td><td>A list containing elements experiments that failed to process.</td></tr><tr><td>screenSamples</td><td>if requested, a list containing the fitted <code><a href="BayeSyneRgy.html">bayesynergy</a></code> object for each experiment.</td></tr></table></div>
+    <p>A list containing two elements</p><table class="table table"><tr><td>screenSummary</td><td>data frame, posterior summary statistics for each experiment.</td></tr><tr><td>failed</td><td>A list containing elements experiments that failed to process.</td></tr><tr><td>screenSamples</td><td>if requested, a list containing the fitted <code>bayesynergy</code> object for each experiment.</td></tr></table></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The elements of <strong>experiments</strong> must themselves be lists with the following elements</p><table class="table table"><tr><td>y:</td><td>matrix of viability scores</td></tr><tr><td>x:</td><td>matrix of concentrations</td></tr><tr><td>drug_names:</td><td>vector of drug names in the experiment</td></tr><tr><td>experiment_ID:</td><td>string denoting the unique experiment ID, e.g. cell line name.
