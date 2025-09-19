@@ -1,5 +1,5 @@
 pandoc: 3.1.11
-pkgdown: 2.1.2
+pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
   Advanced_topics: Advanced_topics.html
@@ -7,7 +7,7 @@ articles:
   Example_screen: Example_screen.html
   Example_single: Example_single.html
   Model: Model.html
-last_built: 2025-05-01T17:41Z
+last_built: 2025-09-19T10:07Z
 urls:
   reference: https://ocbe-uio.github.io/bayesynergy/reference
   article: https://ocbe-uio.github.io/bayesynergy/articles
