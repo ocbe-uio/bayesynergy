@@ -91,7 +91,7 @@ trick is to set <code>adapt_delta</code> to a higher value, i.e. larger
 than 0.9 which is the default. This can be done through the
 <code>control</code> option in the <code>bayesynergy</code> call:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">=</span> <span class="fu">bayesynergy</span><span class="op">(</span><span class="va">y</span>, <span class="va">x</span>, control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>adapt_delta <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">=</span> <span class="fu"><a href="../reference/bayesynergy.html">bayesynergy</a></span><span class="op">(</span><span class="va">y</span>, <span class="va">x</span>, control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>adapt_delta <span class="op">=</span> <span class="fl">0.99</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>However, the case above, where there are 2316 divergent transitions,
 is indicative of a misspecified model. In my experience, this can happen
 for a few reasons.</p>
