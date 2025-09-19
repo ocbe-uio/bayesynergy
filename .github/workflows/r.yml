@@ -29,8 +29,10 @@ jobs:
         config:
           - {os: windows-latest, r: 'release'}
           - {os: macOS-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'devel'}
+          # some issues occured on ubuntu-latest related to pandoc-citeproc
+          # https://forum.posit.co/t/github-action-e-package-pandoc-citeproc-has-no-installation-candidate/197536
+          - {os: ubuntu-22.04, r: 'devel', rtools: ''}
+          - {os: ubuntu-22.04, r: 'release', rtools: ''}
     steps:
 
         # Checking out code -------------------------------------- #
