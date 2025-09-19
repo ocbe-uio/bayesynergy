@@ -211,6 +211,9 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
     else if (length(x) == 6){
       tmp = c("Top 1%\nsynergistic","Top 10%\nsynergistic","Top 25%\nsynergistic","\nNo effect","Top 25%\nantagonistic","Top 10%\nantagonistic")
     }
+    else if (length(x) == 8){
+      tmp = c("","Top 1%\nsynergistic","Top 10%\nsynergistic","Top 25%\nsynergistic","\nNo effect","Top 25%\nantagonistic","Top 10%\nantagonistic","")
+    }
     return(tmp)}
 
   # Some minor changes here
