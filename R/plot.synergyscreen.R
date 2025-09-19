@@ -368,7 +368,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
         ###########################################################################################
         ####### PLOT 6: Synergy & Antagonism pairwise per Experiment ID
         ###########################################################################################
-
+        
 
         p6 = ggplot(data = synscores3, mapping = aes_string(x = "`Drug B`", y = "`Drug A`", fill = "`mean_int`")) +
           geom_point(color = "gray", shape = 21, aes_string(size = "`Interaction (sd)`")) +
@@ -377,7 +377,7 @@ plot.synergyscreen <- function(x, groupbyExperimentID = T, save_plots = FALSE, p
                             breaks = breaks,
                             values = scales::rescale(breaks),
                             limits = c(breaks[1]*0.9999,breaks[8]*0.9999),
-                            labels = label_Function,
+                            #labels = label_Function,
                             guide = guide_coloursteps(even.steps = T,
                                                       show.limits = T,
                                                       title = NULL,

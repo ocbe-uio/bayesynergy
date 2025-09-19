@@ -19,7 +19,6 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 The `synergyscreen` provides a work flow for data from big drug
 combination screens, where multiple drugs are tested in combination on
 multiple cell lines. It takes as input a list of experiments, each entry

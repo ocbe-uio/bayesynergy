@@ -45,7 +45,7 @@ LinkingTo:
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.3
 Biarch: true
 SystemRequirements: GNU make
 URL: https://ocbe-uio.github.io/bayesynergy/
